@@ -1,9 +1,21 @@
-import { CATEGORIES } from '../data/categories'
+import { CATEGORIES, DOMAIN_MAP } from '../data/categories'
 
 const NAV_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'all', label: 'All Documents', icon: GridIcon },
-  { id: 'groups', label: 'Playbooks & Groups', icon: GroupIcon },
+  { id: 'groups', label: 'Playbooks', icon: GroupIcon },
 ]
+
+function DashboardIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <rect x="1" y="1" width="6" height="9" rx="1"/>
+      <rect x="9" y="1" width="6" height="4" rx="1"/>
+      <rect x="9" y="7" width="6" height="8" rx="1"/>
+      <rect x="1" y="12" width="6" height="3" rx="1"/>
+    </svg>
+  )
+}
 
 function GridIcon() {
   return (
@@ -26,24 +38,49 @@ function GroupIcon() {
 
 function SettingsIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M8 10a2 2 0 100-4 2 2 0 000 4zm5.7-2.7l1.1-.9-1-1.7-1.4.4a5 5 0 00-.8-.5L11.3 3H9.7l-.3 1.6a5 5 0 00-.8.5L7.2 4.7l-1 1.7 1.1.9a5 5 0 000 1l-1.1.9 1 1.7 1.4-.4a5 5 0 00.8.5l.3 1.6h1.6l.3-1.6a5 5 0 00.8-.5l1.4.4 1-1.7-1.1-.9a5 5 0 000-1z"/>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+      <path d="M2 4.5h12M2 8h12M2 11.5h12" />
+      <circle cx="6" cy="4.5" r="1.8" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="8" r="1.8" fill="currentColor" stroke="none" />
+      <circle cx="5" cy="11.5" r="1.8" fill="currentColor" stroke="none" />
     </svg>
   )
 }
 
-export default function Sidebar({ view, selectedCategory, docs, groups, onNavigate, onSettings }) {
+function ClientIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+      <circle cx="5" cy="3.5" r="2"/>
+      <path d="M1 9c0-2.2 1.8-4 4-4s4 1.8 4 4" fill="currentColor" opacity="0.7"/>
+    </svg>
+  )
+}
+
+export default function Sidebar({ view, selectedCategory, selectedClient, selectedDomain, docs, groups, onNavigate, onSettings }) {
   const countsByCategory = {}
+  const countsByClient = {}
+  const countsByDomain = {}
   if (docs) {
     docs.forEach((d) => {
       countsByCategory[d.category] = (countsByCategory[d.category] ?? 0) + 1
+      if (d.clientName) {
+        countsByClient[d.clientName] = (countsByClient[d.clientName] ?? 0) + 1
+      }
+      if (d.domain) {
+        countsByDomain[d.domain] = (countsByDomain[d.domain] ?? 0) + 1
+      }
     })
   }
+
+  // Sorted lists of unique client names / domain codes
+  const clientNames = Object.keys(countsByClient).sort()
+  const domainCodes = Object.keys(countsByDomain).sort()
 
   const isActive = (id) => {
     if (id === 'all') return view === 'all'
     if (id === 'groups') return view === 'groups'
-    return view === 'category' && selectedCategory === id
+    if (id === 'dashboard') return view === 'dashboard'
+    return false
   }
 
   return (
@@ -57,10 +94,10 @@ export default function Sidebar({ view, selectedCategory, docs, groups, onNaviga
           className="w-7 h-7 rounded flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
           style={{ background: 'var(--mits-red)' }}
         >
-          DM
+          DC
         </div>
         <div>
-          <div className="font-semibold text-white text-sm leading-tight">DocManager</div>
+          <div className="font-semibold text-white text-sm leading-tight">DocCenter</div>
           <div className="text-xs" style={{ color: 'var(--mits-gray-light)' }}>Menozzi IT Solutions</div>
         </div>
       </div>
@@ -88,7 +125,7 @@ export default function Sidebar({ view, selectedCategory, docs, groups, onNaviga
         </div>
         {CATEGORIES.map((cat) => {
           const count = countsByCategory[cat.id] ?? 0
-          const active = isActive(cat.id)
+          const active = view === 'category' && selectedCategory === cat.id
           return (
             <button
               key={cat.id}
@@ -114,6 +151,71 @@ export default function Sidebar({ view, selectedCategory, docs, groups, onNaviga
             </button>
           )
         })}
+
+        {/* Domains */}
+        {domainCodes.length > 0 && (
+          <>
+            <div className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--mits-gray)' }}>
+              By Domain
+            </div>
+            {domainCodes.map((code) => {
+              const active = view === 'domain' && selectedDomain === code
+              return (
+                <button
+                  key={code}
+                  onClick={() => onNavigate('domain', code)}
+                  className="w-full flex items-center justify-between px-4 py-1.5 text-left transition-colors"
+                  style={{
+                    background: active ? 'rgba(225,37,27,0.25)' : 'transparent',
+                    color: active ? 'white' : '#ccc',
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono px-1 rounded" style={{ background: 'rgba(255,255,255,0.08)', color: '#bbb' }}>{code}</span>
+                    <span className="truncate" style={{ maxWidth: 110 }}>{DOMAIN_MAP[code]?.label ?? code}</span>
+                  </div>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(255,255,255,0.1)', color: '#bbb' }}>
+                    {countsByDomain[code]}
+                  </span>
+                </button>
+              )
+            })}
+          </>
+        )}
+
+        {/* Clients */}
+        {clientNames.length > 0 && (
+          <>
+            <div className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--mits-gray)' }}>
+              By Client
+            </div>
+            {clientNames.map((name) => {
+              const active = view === 'client' && selectedClient === name
+              return (
+                <button
+                  key={name}
+                  onClick={() => onNavigate('client', name)}
+                  className="w-full flex items-center justify-between px-4 py-1.5 text-left transition-colors"
+                  style={{
+                    background: active ? 'rgba(225,37,27,0.25)' : 'transparent',
+                    color: active ? 'white' : '#ccc',
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <ClientIcon />
+                    <span className="truncate" style={{ maxWidth: 120 }}>{name}</span>
+                  </div>
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.1)', color: '#bbb' }}
+                  >
+                    {countsByClient[name]}
+                  </span>
+                </button>
+              )
+            })}
+          </>
+        )}
       </nav>
 
       {/* Settings */}

@@ -28,7 +28,7 @@ export default function Onboarding({ onComplete }) {
       </div>
 
       <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--mits-charcoal)' }}>
-        Welcome to MITS DocManager
+        Welcome to MITS DocCenter
       </h1>
       <p className="text-sm mb-8 max-w-md" style={{ color: '#6b7280' }}>
         Your central library for Runbooks, SOPs, Checklists, Client Guides, Scripts, and Letters.

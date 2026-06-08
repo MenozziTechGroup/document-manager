@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "DocManager",
+  "productName": "DocCenter",
   "version": "0.1.0",
   "identifier": "tech.menozzi.docmanager",
   "build": {
@@ -12,17 +12,22 @@
   "app": {
     "windows": [
       {
-        "title": "MITS DocManager",
+        "title": "MITS DocCenter",
         "width": 1400,
         "height": 900,
         "minWidth": 1000,
         "minHeight": 650,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "dragDropEnabled": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
     }
   },
   "plugins": {
@@ -30,7 +35,7 @@
       "endpoints": [
         "https://github.com/MenozziTechGroup/document-manager/releases/latest/download/latest.json"
       ],
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEwRDc2OEU1RThDM0EwNDAKUldSQW9NUG81V2pYb0RxYzNtVm5xNENhNS8zTnlWM3ZVdThCN0xaT1ZyZGxMZDNIaktETFVMVngK"
     }
   },
   "bundle": {

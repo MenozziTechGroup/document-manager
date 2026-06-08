@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { GROUP_COLORS } from '../data/categories'
 
-const EMPTY = { name: '', description: '', color: '#e1251b' }
+const EMPTY = { name: '', description: '', color: '#e1251b', trigger: '', outcome: '' }
 
 export default function GroupModal({ group, onSave, onClose }) {
   const [form, setForm] = useState(group ? { ...group } : { ...EMPTY })
@@ -23,13 +23,13 @@ export default function GroupModal({ group, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: '#e5e7eb' }}>
-          <h2 className="font-semibold text-base">{isEdit ? 'Edit Group' : 'New Playbook / Group'}</h2>
+          <h2 className="font-semibold text-base">{isEdit ? 'Edit Playbook' : 'New Playbook'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 overflow-y-auto">
           <div>
             <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Name *</label>
             <input
@@ -50,7 +50,33 @@ export default function GroupModal({ group, onSave, onClose }) {
               onChange={(e) => set('description', e.target.value)}
               style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px', fontSize: 13, outline: 'none', resize: 'none' }}
               rows={2}
-              placeholder="What does this group of documents cover?"
+              placeholder="What does this playbook accomplish?"
+              onFocus={(e) => { e.target.style.borderColor = '#e1251b' }}
+              onBlur={(e) => { e.target.style.borderColor = '#d1d5db' }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Trigger</label>
+            <textarea
+              value={form.trigger}
+              onChange={(e) => set('trigger', e.target.value)}
+              style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px', fontSize: 13, outline: 'none', resize: 'none' }}
+              rows={2}
+              placeholder="When is this initiated? (e.g. client signs up for Email Security add-on)"
+              onFocus={(e) => { e.target.style.borderColor = '#e1251b' }}
+              onBlur={(e) => { e.target.style.borderColor = '#d1d5db' }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Outcome / Definition of Done</label>
+            <textarea
+              value={form.outcome}
+              onChange={(e) => set('outcome', e.target.value)}
+              style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px', fontSize: 13, outline: 'none', resize: 'none' }}
+              rows={2}
+              placeholder="What is true when this playbook is complete?"
               onFocus={(e) => { e.target.style.borderColor = '#e1251b' }}
               onBlur={(e) => { e.target.style.borderColor = '#d1d5db' }}
             />
@@ -86,7 +112,7 @@ export default function GroupModal({ group, onSave, onClose }) {
             className="text-sm px-4 py-2 rounded text-white font-medium"
             style={{ background: 'var(--mits-red)' }}
           >
-            {isEdit ? 'Save Changes' : 'Create Group'}
+            {isEdit ? 'Save Changes' : 'Create Playbook'}
           </button>
         </div>
       </div>
