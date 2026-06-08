@@ -12,6 +12,7 @@ import {
 import { reviewStatus, DOMAIN_MAP } from './data/categories'
 import { isCloudConfigured, getSession, onAuthChange, signOut, currentUserEmail } from './data/supabase'
 import { setVaultRoot, subscribeChanges } from './data/cloud'
+import { checkForUpdate, installUpdate } from './data/updater'
 import Login from './components/Login'
 import Sidebar from './components/Sidebar'
 import DocumentList from './components/DocumentList'
@@ -71,6 +72,8 @@ export default function App() {
   const [dragging, setDragging] = useState(false)
   const [loadError, setLoadError] = useState(null)
   const [loadReloadKey, setLoadReloadKey] = useState(0)
+  const [update, setUpdate] = useState(null)
+  const [updateState, setUpdateState] = useState('idle') // idle | installing
   const searchInputRef = useRef(null)
   const docsRef = useRef([])
   const selectedRunRef = useRef(null)
@@ -191,6 +194,28 @@ export default function App() {
     })
     return () => { clearTimeout(t); unsub() }
   }, [userId])
+
+  // ── Check for app updates once on launch (desktop only) ────
+  useEffect(() => {
+    if (!isTauri()) return
+    let cancelled = false
+    ;(async () => {
+      const u = await checkForUpdate()
+      if (!cancelled && u) setUpdate(u)
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const applyUpdate = async () => {
+    if (!update) return
+    setUpdateState('installing')
+    try {
+      await installUpdate(update) // app relaunches on success
+    } catch {
+      setUpdateState('idle')
+      alert('Update failed to install. You can try again later or reinstall from the latest release.')
+    }
+  }
 
   // ── Keyboard shortcut: Ctrl/Cmd+K focuses search ───────────
   useEffect(() => {
@@ -690,6 +715,25 @@ export default function App() {
 
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {/* Update banner */}
+        {update && (
+          <div className="flex items-center gap-3 px-4 py-2 flex-wrap" style={{ background: 'var(--mits-charcoal, #3a3a3a)' }}>
+            <span className="text-xs font-semibold text-white">⬆ Update available — v{update.version}</span>
+            {update.body && <span className="text-xs truncate max-w-md" style={{ color: '#d1d5db' }}>{update.body}</span>}
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={applyUpdate}
+                disabled={updateState === 'installing'}
+                className="text-white text-xs font-semibold px-3 py-1 rounded transition-opacity hover:opacity-90 disabled:opacity-60"
+                style={{ background: 'var(--mits-red)' }}
+              >
+                {updateState === 'installing' ? 'Installing…' : 'Install & Restart'}
+              </button>
+              <button onClick={() => setUpdate(null)} className="text-xs" style={{ color: '#9ca3af' }}>Later</button>
+            </div>
+          </div>
+        )}
+
         {/* Search bar */}
         <div className="flex items-center gap-3 px-4 py-2 border-b" style={{ borderColor: '#e5e7eb', background: 'white' }}>
           <div className="flex items-center gap-2 flex-1 rounded-lg px-3 py-1.5 text-sm" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
