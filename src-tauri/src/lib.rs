@@ -94,16 +94,27 @@ fn scan_vault(path: String) -> Result<Vec<ScannedFile>, String> {
       continue;
     }
 
-    let parent_name = p.parent()
-      .and_then(|parent| parent.file_name())
-      .and_then(|n| n.to_str())
-      .unwrap_or("")
-      .to_lowercase();
-
-    let category = category_map.iter()
-      .find(|(key, _)| parent_name.contains(key))
-      .map(|(_, label)| label.to_string())
-      .unwrap_or_else(|| "Other".to_string());
+    // Category = the nearest ancestor folder (closest to the file) whose name
+    // matches a known category keyword. Walking all ancestors (not just the
+    // immediate parent) means nested folder structures categorize correctly.
+    let category = {
+      let rel = p.strip_prefix(root).unwrap_or(p);
+      let mut folders: Vec<String> = rel
+        .components()
+        .filter_map(|c| c.as_os_str().to_str().map(|s| s.to_lowercase()))
+        .collect();
+      folders.pop(); // drop the file name itself
+      let mut found = "Other".to_string();
+      'find: for folder in folders.iter().rev() {
+        for (key, label) in category_map.iter() {
+          if folder.contains(key) {
+            found = label.to_string();
+            break 'find;
+          }
+        }
+      }
+      found
+    };
 
     let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
 
