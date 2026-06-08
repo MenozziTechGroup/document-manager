@@ -773,6 +773,7 @@ export default function App() {
                 onDataChanged={reloadData}
                 userEmail={currentUserEmail(session)}
                 onSignOut={() => signOut()}
+                libraryEmpty={docs.length === 0}
               />
             </div>
           ) : view === 'dashboard' && searchResults === null ? (

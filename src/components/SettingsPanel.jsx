@@ -8,7 +8,7 @@ import {
 
 export default function SettingsPanel({
   vaultPath, onVaultChange, sharePointUrl, onSharePointChange, onDataChanged,
-  userEmail, onSignOut,
+  userEmail, onSignOut, libraryEmpty,
 }) {
   const [path, setPath] = useState(vaultPath ?? '')
   const [saved, setSaved] = useState(false)
@@ -195,17 +195,20 @@ export default function SettingsPanel({
                 Sign out
               </button>
             </div>
-            <div className="mt-3">
-              <p className="text-xs mb-2" style={{ color: '#6b7280' }}>
-                First time on the shared backend? Push this machine's existing local library up to the cloud.
-              </p>
-              <button onClick={handleMigrate} className="text-xs px-3 py-1.5 rounded border transition-colors hover:bg-gray-50" style={{ borderColor: '#d1d5db', color: '#374151' }}>
-                Migrate local library to cloud
-              </button>
-              {migrateMsg && (
-                <div className="text-xs mt-2" style={{ color: migrateMsg.includes('failed') ? '#dc2626' : '#166534' }}>{migrateMsg}</div>
-              )}
-            </div>
+            {libraryEmpty && (
+              <div className="mt-3">
+                <p className="text-xs mb-2" style={{ color: '#6b7280' }}>
+                  First time setup: push this machine's existing local library up to the shared cloud.
+                  <strong> Run this once</strong>, before the team starts editing. (Hidden once the cloud library has documents.)
+                </p>
+                <button onClick={handleMigrate} className="text-xs px-3 py-1.5 rounded border transition-colors hover:bg-gray-50" style={{ borderColor: '#d1d5db', color: '#374151' }}>
+                  Migrate local library to cloud
+                </button>
+                {migrateMsg && (
+                  <div className="text-xs mt-2" style={{ color: migrateMsg.includes('failed') ? '#dc2626' : '#166534' }}>{migrateMsg}</div>
+                )}
+              </div>
+            )}
           </section>
         )}
 
