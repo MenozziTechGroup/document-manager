@@ -24,6 +24,7 @@ export default function SettingsPanel({
   const [audit, setAudit] = useState([])
   const [csvMsg, setCsvMsg] = useState('')
   const [migrateMsg, setMigrateMsg] = useState('')
+  const [appVersion, setAppVersion] = useState('')
 
   const handleMigrate = async () => {
     if (!confirm('Push this machine\'s local library (documents, metadata, playbooks, tags) up to the shared cloud? Safe to run more than once — existing cloud records are updated, not duplicated.')) return
@@ -43,6 +44,9 @@ export default function SettingsPanel({
     getTags().then(setTags)
     getSetting('technicianName', '').then((v) => setTechName(v ?? ''))
     getAuditLog(80).then(setAudit)
+    if (isTauri()) {
+      import('@tauri-apps/api/app').then(({ getVersion }) => getVersion().then(setAppVersion).catch(() => {})).catch(() => {})
+    }
   }, [])
 
   const saveTechName = async () => {
@@ -474,7 +478,7 @@ export default function SettingsPanel({
         <section>
           <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--mits-charcoal)' }}>About</h2>
           <div className="text-xs space-y-1" style={{ color: '#6b7280' }}>
-            <div>MITS DocCenter v0.1.0</div>
+            <div>MITS DocCenter{appVersion ? ` v${appVersion}` : ''}</div>
             <div style={{ color: '#9ca3af' }}>Document Command Center</div>
             <div>Menozzi IT Solutions</div>
           </div>
