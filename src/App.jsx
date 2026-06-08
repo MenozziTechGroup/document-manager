@@ -22,6 +22,7 @@ import PlaybooksView from './components/PlaybooksView'
 import PlaybookRunView from './components/PlaybookRunView'
 import StartRunModal from './components/StartRunModal'
 import SettingsPanel from './components/SettingsPanel'
+import HelpView from './components/HelpView'
 import Onboarding from './components/Onboarding'
 import AddToGroupModal from './components/AddToGroupModal'
 import SupersedeModal from './components/SupersedeModal'
@@ -744,6 +745,10 @@ export default function App() {
                 onAddDoc={() => setDocModal({ doc: null })}
                 onToggleFavorite={handleToggleFavorite}
               />
+            </div>
+          ) : view === 'help' && searchResults === null ? (
+            <div className="flex-1 overflow-hidden" style={{ background: 'var(--app-bg)' }}>
+              <HelpView />
             </div>
           ) : view === 'run' && searchResults === null ? (
             <div className="flex-1 overflow-hidden">

@@ -171,6 +171,7 @@ export default function PreviewPane({
           ) : doc.pdfPath ? (
             <button
               onClick={() => handleOpen(doc.pdfPath)}
+              title="Read-only copy — opens in your PDF viewer"
               className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-medium text-sm text-white transition-opacity hover:opacity-90"
               style={{ background: 'var(--mits-red)' }}
             >

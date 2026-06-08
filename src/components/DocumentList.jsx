@@ -142,6 +142,7 @@ export default function DocumentList({
             <button
               onClick={onScanVault}
               disabled={scanning}
+              title="Scan your vault folder for new or changed documents"
               className="text-xs px-3 py-1.5 rounded border transition-colors hover:bg-gray-50 flex items-center gap-1.5"
               style={{ borderColor: '#d1d5db', color: '#6b7280' }}
             >

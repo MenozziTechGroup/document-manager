@@ -36,6 +36,16 @@ function GroupIcon() {
   )
 }
 
+function HelpIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="8" cy="8" r="6.5" />
+      <path d="M6.2 6.2a1.9 1.9 0 0 1 3.6.6c0 1.2-1.8 1.6-1.8 2.7" strokeLinecap="round" />
+      <circle cx="8" cy="11.6" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 function SettingsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
@@ -218,8 +228,19 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
         )}
       </nav>
 
-      {/* Settings */}
-      <div className="border-t border-white/10 p-2">
+      {/* Help + Settings */}
+      <div className="border-t border-white/10 p-2 space-y-0.5">
+        <button
+          onClick={() => onNavigate('help')}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded transition-colors"
+          style={{
+            background: view === 'help' ? 'rgba(225,37,27,0.25)' : 'transparent',
+            color: view === 'help' ? 'white' : '#aaa',
+          }}
+        >
+          <HelpIcon />
+          <span>Help &amp; Guide</span>
+        </button>
         <button
           onClick={onSettings}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded transition-colors"
