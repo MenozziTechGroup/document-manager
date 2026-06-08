@@ -36,8 +36,10 @@ export default function HelpView() {
             across the team.
           </Q>
           <Q q="Where do the files actually live?">
-            In your <strong>vault</strong> — the SharePoint-synced folder on your PC (set in Settings → Vault Folder).
-            DocCenter never moves or stores the files; it reads and opens them straight from there.
+            In <strong>one master library in SharePoint</strong>, synced down to a local folder on each PC. DocCenter
+            never moves or stores the files — it reads and opens them from your local synced copy, and edits flow back
+            up to SharePoint for everyone. Each machine's folder path differs (it's under your own user profile), but
+            it's the same shared library.
           </Q>
           <Q q="Is this shared with the team?">
             Yes. Everyone signs in, and the library organization, playbooks, and in-progress runs are shared live.
@@ -51,9 +53,12 @@ export default function HelpView() {
             Settings → Your Name so the activity log shows who did what.
           </Q>
           <Q q="Point at your vault">
-            Settings → Vault Folder → Browse to your SharePoint-synced documents folder. Organize it with
-            subfolders named after the categories (Runbooks, SOPs, Checklists, Client Guides, Scripts, Letters)
-            so documents get categorized automatically.
+            First make sure the MITS documents library is <strong>synced to your PC</strong>: in SharePoint, open the
+            library and click <strong>Sync</strong> (or "Add shortcut to OneDrive"). Once it's syncing, go to
+            <strong> Settings → Vault Folder → Browse</strong> and select that local folder. Your path will look
+            different from your teammates' (it's under your own user profile) — that's expected; it's the same shared
+            library. The library uses subfolders named after the categories (Runbooks, SOPs, Checklists, Client Guides,
+            Scripts, Letters) so documents get categorized automatically.
           </Q>
           <Q q="Sync Vault">
             Click <strong>Sync Vault</strong> to scan that folder and pull documents into the library. Run it again
