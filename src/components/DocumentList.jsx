@@ -27,6 +27,8 @@ export default function DocumentList({
   onBulkDelete,
   onBulkAddToPlaybook,
   playbooks = [],
+  onEditDoc,       // if set, card clicks open edit modal directly (used in new-docs view)
+  onDismissNew,    // if set, shows a "Done" button to dismiss the new-docs view
 }) {
   // Derive category list dynamically from all docs passed in
   const categoryList = useMemo(() => {
@@ -171,7 +173,16 @@ export default function DocumentList({
               )}
             </button>
           )}
-          <button
+          {onDismissNew && (
+            <button
+              onClick={onDismissNew}
+              className="text-xs px-3 py-1.5 rounded border"
+              style={{ borderColor: '#d1d5db', color: '#6b7280' }}
+            >
+              Done
+            </button>
+          )}
+          {!onDismissNew && <button
             onClick={onAddDoc}
             className="text-xs px-3 py-1.5 rounded text-white flex items-center gap-1.5"
             style={{ background: 'var(--mits-red)' }}
@@ -180,7 +191,7 @@ export default function DocumentList({
               <path d="M5 1v8M1 5h8" stroke="white" strokeWidth="1.5" fill="none"/>
             </svg>
             Add Document
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -367,7 +378,7 @@ export default function DocumentList({
                 <DocumentCard
                   doc={doc}
                   selected={doc.id === selectedDocId}
-                  onClick={() => (selectMode ? toggleSelect(doc.id) : onSelectDoc(doc))}
+                  onClick={() => (selectMode ? toggleSelect(doc.id) : onEditDoc ? onEditDoc(doc) : onSelectDoc(doc))}
                   onToggleFavorite={selectMode ? undefined : onToggleFavorite}
                   isMissing={missingIds?.has(doc.id)}
                 />

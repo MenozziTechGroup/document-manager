@@ -174,6 +174,7 @@ export async function syncScannedDocuments(items) {
     if (b && !byBase.has(b)) byBase.set(b, d)
   }
   let added = 0, relinked = 0
+  const addedIds = []
   for (const it of items) {
     const relKey = stripExt(relativize(it.docxPath || it.pdfPath || it.filePath))
     const docxRel = relativize(it.docxPath)
@@ -203,11 +204,11 @@ export async function syncScannedDocuments(items) {
       relinked++
     } else {
       // Brand-new document → insert with scan defaults
-      await createDocument({ ...it, relKey })
-      added++
+      const doc = await createDocument({ ...it, relKey })
+      if (doc) { addedIds.push(doc.id); added++ }
     }
   }
-  return { added, relinked }
+  return { added, relinked, addedIds }
 }
 
 // ============================================================

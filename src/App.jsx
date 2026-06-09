@@ -69,6 +69,7 @@ export default function App() {
   // ── Operations ─────────────────────────────────────────────
   const [scanning, setScanning] = useState(false)
   const [scanMessage, setScanMessage] = useState('')
+  const [newDocIds, setNewDocIds] = useState([]) // IDs of docs added in last scan that need metadata
   const [dragging, setDragging] = useState(false)
   const [loadError, setLoadError] = useState(null)
   const [loadReloadKey, setLoadReloadKey] = useState(0)
@@ -259,7 +260,12 @@ export default function App() {
     setSearchQuery('')
     setSearchResults(null)
     setSelectedDoc(null)
-    if (id === 'category') {
+    if (id === 'new-docs') {
+      setView('new-docs')
+      setSelectedCategory(null)
+      setSelectedClient(null)
+      setSelectedDomain(null)
+    } else if (id === 'category') {
       setView('category')
       setSelectedCategory(param)
       setSelectedClient(null)
@@ -341,7 +347,7 @@ export default function App() {
       }
 
       // Reconcile: insert new, relink moved/renamed files, refresh existing
-      const { added, relinked } = await syncScannedDocuments(items)
+      const { added, relinked, addedIds } = await syncScannedDocuments(items)
 
       const allDocs = await getDocuments()
       setDocs(allDocs)
@@ -349,6 +355,7 @@ export default function App() {
       if (added > 0) parts.push(`${added} new`)
       if (relinked > 0) parts.push(`${relinked} relinked`)
       setScanMessage(parts.length ? `Synced: ${parts.join(', ')}.` : 'Vault is up to date.')
+      if (addedIds && addedIds.length > 0) setNewDocIds(addedIds)
       if (parts.length) logEvent('Vault synced', parts.join(', '))
 
       // Refresh missing-file detection and auto-back up metadata (best effort)
@@ -618,8 +625,10 @@ export default function App() {
   }, [])
 
   // ── Derived list for the center pane ──────────────────────
+  const newDocIdSet = new Set(newDocIds)
   const displayDocs = (() => {
     if (searchResults !== null) return searchResults
+    if (view === 'new-docs') return docs.filter((d) => newDocIdSet.has(d.id))
     if (view === 'category') return docs.filter((d) => d.category === selectedCategory)
     if (view === 'client') return docs.filter((d) => d.clientName === selectedClient)
     if (view === 'domain') return docs.filter((d) => d.domain === selectedDomain)
@@ -628,6 +637,7 @@ export default function App() {
 
   const listTitle = (() => {
     if (searchResults !== null) return 'Search Results'
+    if (view === 'new-docs') return 'New Documents'
     if (view === 'category') return selectedCategory ?? 'Documents'
     if (view === 'client') return selectedClient ?? 'Client Documents'
     if (view === 'domain') return (DOMAIN_MAP[selectedDomain]?.label ?? selectedDomain) || 'Domain'
@@ -636,6 +646,7 @@ export default function App() {
 
   const listSubtitle = (() => {
     if (searchResults !== null) return `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchQuery}"`
+    if (view === 'new-docs') return `${displayDocs.length} document${displayDocs.length !== 1 ? 's' : ''} added from last scan — click each to fill in details`
     if (view === 'client') return `${displayDocs.length} document${displayDocs.length !== 1 ? 's' : ''} for ${selectedClient}`
     if (view === 'domain') return `${displayDocs.length} document${displayDocs.length !== 1 ? 's' : ''} in this domain`
     return `${displayDocs.length} document${displayDocs.length !== 1 ? 's' : ''}`
@@ -730,6 +741,31 @@ export default function App() {
                 {updateState === 'installing' ? 'Installing…' : 'Install & Restart'}
               </button>
               <button onClick={() => setUpdate(null)} className="text-xs" style={{ color: '#9ca3af' }}>Later</button>
+            </div>
+          </div>
+        )}
+
+        {/* New documents banner */}
+        {newDocIds.length > 0 && (
+          <div className="flex items-center gap-3 px-4 py-2 flex-wrap" style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
+            <span style={{ fontSize: 13, color: '#92400e' }}>
+              ✦ <strong>{newDocIds.length} new document{newDocIds.length !== 1 ? 's' : ''}</strong> added from last scan — fill in their details
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => navigate('new-docs')}
+                className="text-xs font-semibold px-3 py-1 rounded"
+                style={{ background: '#d97706', color: 'white' }}
+              >
+                Review Now
+              </button>
+              <button
+                onClick={() => setNewDocIds([])}
+                className="text-xs"
+                style={{ color: '#92400e' }}
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         )}
@@ -833,6 +869,8 @@ export default function App() {
                   subtitle={listSubtitle}
                   selectedDocId={selectedDoc?.id}
                   onSelectDoc={setSelectedDoc}
+                  onEditDoc={view === 'new-docs' ? (doc) => setDocModal({ doc }) : undefined}
+                  onDismissNew={view === 'new-docs' ? () => { setNewDocIds([]); navigate('all') } : undefined}
                   onAddDoc={() => {
                     const preset = view === 'category'
                       ? { category: selectedCategory }
