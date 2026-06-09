@@ -3,6 +3,7 @@ export const CATEGORIES = [
   { id: 'SOPs',            label: 'SOPs',               code: 'SOP', color: '#2563eb', bg: '#dbeafe' },
   { id: 'Checklists',      label: 'Checklists',         code: 'CHK', color: '#16a34a', bg: '#dcfce7' },
   { id: 'Client Guides',   label: 'Client Guides',      code: 'CGD', color: '#d97706', bg: '#fef3c7' },
+  { id: 'Scripts',           label: 'Scripts',            code: 'SCP', color: '#ea580c', bg: '#ffedd5' },
   { id: 'Scripts Reference', label: 'Scripts Reference', code: 'SCR', color: '#7c3aed', bg: '#ede9fe' },
   { id: 'Reference',       label: 'Reference',          code: 'REF', color: '#0d9488', bg: '#ccfbf1' },
   { id: 'Policy',          label: 'Policy',             code: 'POL', color: '#9333ea', bg: '#f3e8ff' },

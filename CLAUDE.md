@@ -1,6 +1,6 @@
 # DocCenter — Project Brief (for a fresh Claude Code session)
 
-> **Status:** Shipped and in rollout. Published release **v0.1.3** (signed, auto-updating).
+> **Status:** Shipped and in rollout. Published release **v0.1.7** (signed, auto-updating).
 > This file orients a new session. Companion docs: `STACK.md`, `BACKEND_SETUP.md`,
 > `RELEASING.md`, `DOCCENTER_FOR_AUTHORING.md`. Read those for detail.
 
