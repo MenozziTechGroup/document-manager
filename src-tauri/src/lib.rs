@@ -22,8 +22,9 @@ pub struct ScannedFile {
 }
 
 /// Walks a vault folder up to 3 levels deep and returns all .docx and .pdf files.
-/// Category is derived from the immediate parent folder name matched against
-/// known MITS document category folder names.
+/// Category is the nearest ancestor folder name (closest to the file), using its
+/// original casing from the filesystem. This makes categories fully dynamic —
+/// any folder you add to the vault automatically becomes a category.
 #[tauri::command]
 fn scan_vault(path: String) -> Result<Vec<ScannedFile>, String> {
   if path.is_empty() {
@@ -33,29 +34,6 @@ fn scan_vault(path: String) -> Result<Vec<ScannedFile>, String> {
   if !root.exists() {
     return Err(format!("Path does not exist: {}", path));
   }
-
-  let category_map: &[(&str, &str)] = &[
-    ("runbooks", "Runbooks"),
-    ("runbook", "Runbooks"),
-    ("sops", "SOPs"),
-    ("sop", "SOPs"),
-    ("standard operating", "SOPs"),
-    ("checklists", "Checklists"),
-    ("checklist", "Checklists"),
-    ("client guides", "Client Guides"),
-    ("client-guides", "Client Guides"),
-    ("clientguides", "Client Guides"),
-    ("scripts reference", "Scripts Reference"),
-    ("scripts", "Scripts"),
-    ("script", "Scripts"),
-    ("powershell", "Scripts"),
-    ("automation", "Scripts"),
-    ("reference", "Reference"),
-    ("policies", "Policy"),
-    ("policy", "Policy"),
-    ("letters", "Letters"),
-    ("letter", "Letters"),
-  ];
 
   // Documents (.docx/.pdf) plus script files we treat as first-class items.
   let allowed_ext: &[&str] = &[
@@ -94,26 +72,21 @@ fn scan_vault(path: String) -> Result<Vec<ScannedFile>, String> {
       continue;
     }
 
-    // Category = the nearest ancestor folder (closest to the file) whose name
-    // matches a known category keyword. Walking all ancestors (not just the
-    // immediate parent) means nested folder structures categorize correctly.
+    // Category = the nearest ancestor folder name (closest to the file),
+    // preserving its original casing. Falls back to "Other" if the file
+    // sits directly in the vault root with no parent folder.
     let category = {
       let rel = p.strip_prefix(root).unwrap_or(p);
-      let mut folders: Vec<String> = rel
+      let folders: Vec<String> = rel
         .components()
-        .filter_map(|c| c.as_os_str().to_str().map(|s| s.to_lowercase()))
+        .filter_map(|c| c.as_os_str().to_str().map(|s| s.to_string()))
         .collect();
-      folders.pop(); // drop the file name itself
-      let mut found = "Other".to_string();
-      'find: for folder in folders.iter().rev() {
-        for (key, label) in category_map.iter() {
-          if folder.contains(key) {
-            found = label.to_string();
-            break 'find;
-          }
-        }
+      // folders includes the file name as last element; we want the one before it
+      if folders.len() >= 2 {
+        folders[folders.len() - 2].clone()
+      } else {
+        "Other".to_string()
       }
-      found
     };
 
     let size = entry.metadata().map(|m| m.len()).unwrap_or(0);

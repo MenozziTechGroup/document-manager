@@ -13,6 +13,12 @@ export const CATEGORIES = [
 
 export const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]))
 
+// Returns display info for any category name — predefined ones get their
+// configured color/code; unknown folder names get a neutral default.
+export function getCategoryInfo(name) {
+  return CATEGORY_MAP[name] ?? { id: name, label: name, code: null, color: '#6b7280', bg: '#f3f4f6' }
+}
+
 // Domain codes — the second organizing axis (the tool/area a document is about).
 // Used alongside the type/category to form Doc IDs like SOP-MDM-003 and to
 // browse "everything Hornetsecurity" across document types.

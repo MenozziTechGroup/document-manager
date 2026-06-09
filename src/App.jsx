@@ -883,6 +883,7 @@ export default function App() {
           onSave={handleSaveDoc}
           onClose={() => setDocModal(null)}
           vaultPath={vaultPath}
+          categoryNames={[...new Set(docs.map((d) => d.category))]}
         />
       )}
       {groupModal && (

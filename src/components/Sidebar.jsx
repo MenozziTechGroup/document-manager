@@ -1,4 +1,4 @@
-import { CATEGORIES, DOMAIN_MAP } from '../data/categories'
+import { CATEGORY_MAP, getCategoryInfo, DOMAIN_MAP } from '../data/categories'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
@@ -82,6 +82,15 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
     })
   }
 
+  // Build the category list from what's actually in the docs, preserving
+  // the predefined order for known categories and appending unknown ones alphabetically.
+  const knownOrder = Object.keys(CATEGORY_MAP)
+  const allCategoryNames = Object.keys(countsByCategory)
+  const sortedCategories = [
+    ...knownOrder.filter((k) => allCategoryNames.includes(k)),
+    ...allCategoryNames.filter((k) => !CATEGORY_MAP[k]).sort(),
+  ]
+
   // Sorted lists of unique client names / domain codes
   const clientNames = Object.keys(countsByClient).sort()
   const domainCodes = Object.keys(countsByDomain).sort()
@@ -133,13 +142,14 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
         <div className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--mits-gray)' }}>
           Categories
         </div>
-        {CATEGORIES.map((cat) => {
-          const count = countsByCategory[cat.id] ?? 0
-          const active = view === 'category' && selectedCategory === cat.id
+        {sortedCategories.map((catId) => {
+          const cat = getCategoryInfo(catId)
+          const count = countsByCategory[catId] ?? 0
+          const active = view === 'category' && selectedCategory === catId
           return (
             <button
-              key={cat.id}
-              onClick={() => onNavigate('category', cat.id)}
+              key={catId}
+              onClick={() => onNavigate('category', catId)}
               className="w-full flex items-center justify-between px-4 py-1.5 text-left transition-colors"
               style={{
                 background: active ? 'rgba(225,37,27,0.25)' : 'transparent',
