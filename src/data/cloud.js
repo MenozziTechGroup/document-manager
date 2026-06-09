@@ -176,16 +176,34 @@ export async function syncScannedDocuments(items) {
   let added = 0, relinked = 0
   for (const it of items) {
     const relKey = stripExt(relativize(it.docxPath || it.pdfPath || it.filePath))
-    const itWithKey = { ...it, relKey }
-    if (byKey.has(relKey)) { await createDocument(itWithKey); continue } // refresh
+    const docxRel = relativize(it.docxPath)
+    const pdfRel = relativize(it.pdfPath)
+    const isScript = !docxRel && !pdfRel
+    // Only the file-location fields are ever touched by a scan — NEVER the
+    // curated metadata (tags, description, doc_id, review dates, etc.), so a
+    // teammate re-syncing the same vault can't wipe what others have set.
+    const pathFields = {
+      rel_docx: docxRel,
+      rel_pdf: pdfRel,
+      rel_file: isScript ? relativize(it.filePath) : '',
+      file_name: it.fileName,
+      file_type: it.fileType,
+    }
+    if (byKey.has(relKey)) {
+      // Already tracked at this path → refresh paths only, preserve metadata
+      await supabase.from('documents').update(pathFields).eq('rel_key', relKey)
+      continue
+    }
     const base = (it.fileName || '').replace(/\.[^.]+$/, '').toLowerCase()
     const moved = base ? byBase.get(base) : null
     if (moved && moved.relKey !== relKey) {
-      await updateDocument({ ...moved, ...itWithKey })
+      // File renamed/moved → keep its metadata, update location (+ new folder's category)
+      await supabase.from('documents').update({ ...pathFields, rel_key: relKey, category: it.category }).eq('id', moved.id)
       byBase.delete(base)
       relinked++
     } else {
-      await createDocument(itWithKey)
+      // Brand-new document → insert with scan defaults
+      await createDocument({ ...it, relKey })
       added++
     }
   }
