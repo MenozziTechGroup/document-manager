@@ -35,6 +35,7 @@ export const DOMAINS = [
   { code: 'ONB',  label: 'Onboarding' },
   { code: 'OFB',  label: 'Offboarding' },
   { code: 'INC',  label: 'Incident Response' },
+  { code: 'HR',   label: 'HR' },
 ]
 
 export const DOMAIN_MAP = Object.fromEntries(DOMAINS.map((d) => [d.code, d]))
