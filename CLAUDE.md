@@ -73,7 +73,8 @@ CSV export, shared Supabase backend with per-user login, in-app Help, and auto-u
   Installed apps then show an Install & Restart banner. See `RELEASING.md`.
 - Local unsigned build: `npx tauri build --config "{\"bundle\":{\"createUpdaterArtifacts\":false}}"`.
 - **Always quit the tray app before rebuilding** (close-to-tray holds the exe).
-- Commit messages end with: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- Commit messages end with: `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
+  Name the model that actually wrote the commit; update this line when the model changes.
 
 ## Backend
 
