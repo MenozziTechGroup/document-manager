@@ -8,6 +8,7 @@ export const CATEGORIES = [
   { id: 'Reference',       label: 'Reference',          code: 'REF', color: '#0d9488', bg: '#ccfbf1' },
   { id: 'Policy',          label: 'Policy',             code: 'POL', color: '#9333ea', bg: '#f3e8ff' },
   { id: 'Letters',         label: 'Letters',            code: 'LTR', color: '#0891b2', bg: '#cffafe' },
+  { id: 'Agreements',      label: 'Agreements',         code: 'AGR', color: '#0e2841', bg: '#dde5ee' },
   { id: 'Other',           label: 'Other',              code: 'OTH', color: '#6b7280', bg: '#f3f4f6' },
 ]
 
