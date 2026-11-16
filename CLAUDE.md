@@ -68,7 +68,9 @@ CSV export, shared Supabase backend with per-user login, in-app Help, and auto-u
 - **DB migration:** append to the `migrations` array in `lib.rs` in **ascending version
   order** (next is v9).
 - **Release:** bump version in `src-tauri/tauri.conf.json`, `package.json`, `src-tauri/Cargo.toml`,
-  and the `app` entry in `src-tauri/Cargo.lock` → commit → `git tag vX.Y.Z` → `git push origin
+  and the `app` entry in `src-tauri/Cargo.lock` → commit → **merge to `main`** (the workflow
+  fires on any `v*` tag, so tagging an unmerged branch ships a release `main` never sees) →
+  `git tag vX.Y.Z` → `git push origin
   vX.Y.Z` → GitHub Actions builds & signs → `gh release edit vX.Y.Z --draft=false` to publish.
   Installed apps then show an Install & Restart banner. See `RELEASING.md`.
 - Local unsigned build: `npx tauri build --config "{\"bundle\":{\"createUpdaterArtifacts\":false}}"`.

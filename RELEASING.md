@@ -2,16 +2,23 @@
 
 Installed apps auto-update from signed GitHub Releases. To ship a new version:
 
-1. **Bump the version** in `src-tauri/tauri.conf.json` (`version`) and `package.json`.
+1. **Bump the version in all four places**, or the built app disagrees with itself:
+   `src-tauri/tauri.conf.json` (`version`), `package.json`, `src-tauri/Cargo.toml`, and
+   the `app` entry in `src-tauri/Cargo.lock`.
 2. **Commit** the change.
-3. **Tag and push** — the tag must start with `v`:
+3. **Get the commit onto `main` before you tag.** The Release workflow fires on any `v*`
+   tag from any branch, so tagging an unmerged branch ships a signed release built from
+   commits `main` has never seen. That is exactly how `main` sat at v0.1.7 while v0.1.8
+   through v0.1.11 shipped and ran on every machine. Merge the branch first (or commit
+   straight to `main`), then tag the commit that is on `main`.
+4. **Tag and push** — the tag must start with `v`:
    ```
    git tag v0.1.1
    git push origin v0.1.1
    ```
-4. The **Release** GitHub Action builds, **signs**, and publishes a **draft** release
+5. The **Release** GitHub Action builds, **signs**, and publishes a **draft** release
    (`.github/workflows/release.yml`).
-5. Go to the repo's **Releases**, review the draft, and **publish** it. Installed apps
+6. Go to the repo's **Releases**, review the draft, and **publish** it. Installed apps
    pick up the update on next launch.
 
 ## Signing key
