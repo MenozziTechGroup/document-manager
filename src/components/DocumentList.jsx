@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import DocumentCard from './DocumentCard'
-import { reviewStatus, CATEGORIES, STATUSES } from '../data/categories'
+import { reviewStatus, CATEGORY_MAP, getCategoryInfo, STATUSES } from '../data/categories'
 
 const SORT_OPTIONS = [
   { id: 'title-asc',   label: 'Title A–Z' },
@@ -27,7 +27,19 @@ export default function DocumentList({
   onBulkDelete,
   onBulkAddToPlaybook,
   playbooks = [],
+  onEditDoc,       // if set, card clicks open edit modal directly (used in new-docs view)
+  onDismissNew,    // if set, shows a "Done" button to dismiss the new-docs view
 }) {
+  // Derive category list dynamically from all docs passed in
+  const categoryList = useMemo(() => {
+    const names = [...new Set(docs.map((d) => d.category))]
+    const knownOrder = Object.keys(CATEGORY_MAP)
+    return [
+      ...knownOrder.filter((k) => names.includes(k)),
+      ...names.filter((n) => !CATEGORY_MAP[n]).sort(),
+    ]
+  }, [docs])
+
   const [sortBy, setSortBy] = useState('title-asc')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterType, setFilterType] = useState('all')
@@ -161,7 +173,16 @@ export default function DocumentList({
               )}
             </button>
           )}
-          <button
+          {onDismissNew && (
+            <button
+              onClick={onDismissNew}
+              className="text-xs px-3 py-1.5 rounded border"
+              style={{ borderColor: '#d1d5db', color: '#6b7280' }}
+            >
+              Done
+            </button>
+          )}
+          {!onDismissNew && <button
             onClick={onAddDoc}
             className="text-xs px-3 py-1.5 rounded text-white flex items-center gap-1.5"
             style={{ background: 'var(--mits-red)' }}
@@ -170,7 +191,7 @@ export default function DocumentList({
               <path d="M5 1v8M1 5h8" stroke="white" strokeWidth="1.5" fill="none"/>
             </svg>
             Add Document
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -298,7 +319,7 @@ export default function DocumentList({
 
           <select disabled={!selected.size} onChange={(e) => { if (e.target.value) applyBulk({ category: e.target.value }); e.target.value = '' }} className="rounded border" style={{ borderColor: '#d1d5db', color: '#374151', padding: '3px 6px', background: 'white' }} defaultValue="">
             <option value="">Set category…</option>
-            {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            {categoryList.map((id) => { const c = getCategoryInfo(id); return <option key={id} value={id}>{c.label}</option> })}
           </select>
 
           <div className="flex items-center gap-1">
@@ -357,7 +378,7 @@ export default function DocumentList({
                 <DocumentCard
                   doc={doc}
                   selected={doc.id === selectedDocId}
-                  onClick={() => (selectMode ? toggleSelect(doc.id) : onSelectDoc(doc))}
+                  onClick={() => (selectMode ? toggleSelect(doc.id) : onEditDoc ? onEditDoc(doc) : onSelectDoc(doc))}
                   onToggleFavorite={selectMode ? undefined : onToggleFavorite}
                   isMissing={missingIds?.has(doc.id)}
                 />

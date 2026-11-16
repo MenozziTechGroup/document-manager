@@ -125,6 +125,7 @@ export async function syncScannedDocuments(items) {
     if (b && !byBase.has(b)) byBase.set(b, d)
   }
   let added = 0, relinked = 0
+  const addedIds = []
   for (const it of items) {
     if (byFilePath.has(it.filePath)) {
       await createDocument(it) // upsert on file_path → refreshes docx/pdf paths
@@ -146,10 +147,10 @@ export async function syncScannedDocuments(items) {
       relinked++
     } else {
       const doc = await createDocument(it)
-      if (doc) added++
+      if (doc) { addedIds.push(doc.id); added++ }
     }
   }
-  return { added, relinked }
+  return { added, relinked, addedIds }
 }
 
 export async function updateDocument(doc) {

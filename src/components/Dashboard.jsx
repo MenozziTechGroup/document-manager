@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CATEGORIES, CATEGORY_MAP, STATUS_MAP, FILE_TYPE_INFO, DOMAIN_MAP, reviewStatus } from '../data/categories'
+import { CATEGORY_MAP, getCategoryInfo, STATUS_MAP, FILE_TYPE_INFO, DOMAIN_MAP, reviewStatus } from '../data/categories'
 
 function DocRow({ doc, onClick }) {
   const status = STATUS_MAP[doc.status] ?? STATUS_MAP.active
@@ -52,13 +52,19 @@ function DocRow({ doc, onClick }) {
 export default function Dashboard({ docs, onSelectDoc, onNavigateCategory, onNavigateDomain, onNavigateClient, onScanVault, scanning, vaultPath, onAddDoc, onToggleFavorite }) {
   const [browseMode, setBrowseMode] = useState('type') // type | domain | client
 
-  // Group docs by category, preserving CATEGORIES order
+  // Group docs by category dynamically
   const byCategory = {}
-  for (const cat of CATEGORIES) byCategory[cat.id] = []
   for (const doc of docs) {
-    if (byCategory[doc.category]) byCategory[doc.category].push(doc)
-    else byCategory['Other'] = [...(byCategory['Other'] ?? []), doc]
+    if (!byCategory[doc.category]) byCategory[doc.category] = []
+    byCategory[doc.category].push(doc)
   }
+  // Build sorted category list: known ones in predefined order, unknowns alphabetically after
+  const knownOrder = Object.keys(CATEGORY_MAP)
+  const allCatKeys = Object.keys(byCategory)
+  const sortedCategoryKeys = [
+    ...knownOrder.filter((k) => allCatKeys.includes(k)),
+    ...allCatKeys.filter((k) => !CATEGORY_MAP[k]).sort(),
+  ]
 
   // Group by domain and by client (only entries that have values)
   const byDomain = {}
@@ -239,18 +245,19 @@ export default function Dashboard({ docs, onSelectDoc, onNavigateCategory, onNav
           </div>
         ) : (
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
-            {browseMode === 'type' && CATEGORIES.map((cat) => {
-              const catDocs = byCategory[cat.id] ?? []
+            {browseMode === 'type' && sortedCategoryKeys.map((catId) => {
+              const cat = getCategoryInfo(catId)
+              const catDocs = byCategory[catId] ?? []
               if (catDocs.length === 0) return null
               return (
                 <GroupCard
-                  key={cat.id}
+                  key={catId}
                   title={cat.label}
                   color={cat.color}
                   count={catDocs.length}
                   docs={catDocs}
                   onSelectDoc={onSelectDoc}
-                  onViewAll={() => onNavigateCategory(cat.id)}
+                  onViewAll={() => onNavigateCategory(catId)}
                 />
               )
             })}

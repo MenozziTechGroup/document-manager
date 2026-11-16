@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CATEGORIES, CATEGORY_MAP, STATUSES, DOMAINS, AUDIENCES, FILE_TYPE_OPTIONS } from '../data/categories'
+import { CATEGORIES, CATEGORY_MAP, getCategoryInfo, STATUSES, DOMAINS, AUDIENCES, FILE_TYPE_OPTIONS } from '../data/categories'
 import { isTauri } from '../data/db'
 import { getTags, addTag, getClientNames, suggestDocId } from '../data/repo'
 
@@ -22,7 +22,15 @@ const EMPTY = {
   audience: 'Internal',
 }
 
-export default function DocumentModal({ doc, onSave, onClose, vaultPath }) {
+export default function DocumentModal({ doc, onSave, onClose, vaultPath, categoryNames }) {
+  // categoryNames: optional array of category name strings derived from live docs.
+  // Falls back to the predefined CATEGORIES list if not provided.
+  const categoryList = categoryNames
+    ? [
+        ...CATEGORIES.map((c) => c.id).filter((id) => categoryNames.includes(id)),
+        ...categoryNames.filter((n) => !CATEGORY_MAP[n]).sort(),
+      ]
+    : CATEGORIES.map((c) => c.id)
   // doc can be: null (new), { category } (new with preset category), or a full doc object (edit)
   const isEdit = !!(doc?.id)
   const [form, setForm] = useState(
@@ -150,7 +158,10 @@ export default function DocumentModal({ doc, onSave, onClose, vaultPath }) {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Category">
               <select value={form.category} onChange={(e) => set('category', e.target.value)} className="input-base">
-                {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                {categoryList.map((id) => {
+                  const c = getCategoryInfo(id)
+                  return <option key={id} value={id}>{c.label}</option>
+                })}
               </select>
             </Field>
             <Field label="Status">

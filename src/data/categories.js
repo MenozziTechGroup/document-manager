@@ -3,14 +3,22 @@ export const CATEGORIES = [
   { id: 'SOPs',            label: 'SOPs',               code: 'SOP', color: '#2563eb', bg: '#dbeafe' },
   { id: 'Checklists',      label: 'Checklists',         code: 'CHK', color: '#16a34a', bg: '#dcfce7' },
   { id: 'Client Guides',   label: 'Client Guides',      code: 'CGD', color: '#d97706', bg: '#fef3c7' },
+  { id: 'Scripts',           label: 'Scripts',            code: 'SCP', color: '#ea580c', bg: '#ffedd5' },
   { id: 'Scripts Reference', label: 'Scripts Reference', code: 'SCR', color: '#7c3aed', bg: '#ede9fe' },
   { id: 'Reference',       label: 'Reference',          code: 'REF', color: '#0d9488', bg: '#ccfbf1' },
   { id: 'Policy',          label: 'Policy',             code: 'POL', color: '#9333ea', bg: '#f3e8ff' },
   { id: 'Letters',         label: 'Letters',            code: 'LTR', color: '#0891b2', bg: '#cffafe' },
+  { id: 'Agreements',      label: 'Agreements',         code: 'AGR', color: '#0e2841', bg: '#dde5ee' },
   { id: 'Other',           label: 'Other',              code: 'OTH', color: '#6b7280', bg: '#f3f4f6' },
 ]
 
 export const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]))
+
+// Returns display info for any category name — predefined ones get their
+// configured color/code; unknown folder names get a neutral default.
+export function getCategoryInfo(name) {
+  return CATEGORY_MAP[name] ?? { id: name, label: name, code: null, color: '#6b7280', bg: '#f3f4f6' }
+}
 
 // Domain codes — the second organizing axis (the tool/area a document is about).
 // Used alongside the type/category to form Doc IDs like SOP-MDM-003 and to
@@ -28,6 +36,7 @@ export const DOMAINS = [
   { code: 'ONB',  label: 'Onboarding' },
   { code: 'OFB',  label: 'Offboarding' },
   { code: 'INC',  label: 'Incident Response' },
+  { code: 'HR',   label: 'HR' },
 ]
 
 export const DOMAIN_MAP = Object.fromEntries(DOMAINS.map((d) => [d.code, d]))
