@@ -72,7 +72,44 @@ one tech makes (e.g. checking off a playbook step) refreshes for the others auto
 - Signed, auto-updating releases come from the GitHub Actions pipeline (`.github/workflows/release.yml`),
   which holds the signing key as a secret. (Repo + pipeline = the remaining milestone.)
 
+## Playbook membership survives a document delete — on purpose
+
+The local and cloud schemas are **not** mirrors of each other, and the difference is
+deliberate rather than an oversight:
+
+| | Local SQLite | Supabase |
+|---|---|---|
+| Table | `group_members` | `playbook_members` |
+| Points at a document by | `document_id` → `documents(id)` `ON DELETE CASCADE` | `rel_key` (the vault-relative path) — **no foreign key** |
+
+So `repo.deleteDocument()` clears a document's memberships, while
+`cloud.deleteDocument()` deletes only the `documents` row and leaves
+`playbook_members` alone. That is not a missing cascade — there is no key to cascade
+through. Membership in the cloud is a *path* reference, which means:
+
+- **Re-filing a document restores its playbooks.** Delete a record and let the next
+  vault scan re-create it at the same path, and it rejoins every playbook it was in.
+  The local path would have thrown that away. This is the behaviour you want on a
+  shared team library where records come and go with rescans.
+- **Orphans are invisible, not broken.** `getGroupMembers()` resolves each `rel_key`
+  against the current documents and drops anything that no longer matches, so a
+  playbook never shows a phantom step. The leftover rows just sit there.
+
+Do **not** "fix" this by adding a `document_id` column or a cascade. The one real sharp
+edge is resurrection: if a *different* document is later filed at a path a deleted one
+used to occupy, it silently inherits the old playbook membership. If a document is
+archived to a new path and something else takes its old one, check the playbooks.
+
 ## Housekeeping
 
 - The throwaway `test@menozzi.tech` account used during development can be deleted in
   Supabase → Authentication → Users once you're done testing.
+- **Orphaned playbook members.** Rows in `playbook_members` whose `rel_key` no longer
+  matches a document are harmless (see above) but accumulate. To list them, and only
+  then decide whether to clear them:
+
+  ```sql
+  select pm.* from playbook_members pm
+  left join documents d on d.rel_key = pm.rel_key
+  where d.id is null;
+  ```
