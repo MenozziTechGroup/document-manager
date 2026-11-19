@@ -57,8 +57,9 @@ CSV export, shared Supabase backend with per-user login, in-app Help, and auto-u
 ## Making changes & releasing (Claude handles git)
 
 - **Verify in the Vite browser preview** for JS/UI (cloud is testable in-browser too via the
-  Supabase JS client; test login `test@menozzi.tech` / password in Keeper — delete this account
-  before final rollout). Rust commands + migrations need a desktop build to test.
+  Supabase JS client; sign in with the development account named in `OPERATIONS.local.md`,
+  which should be deleted before final rollout). Rust commands + migrations need a desktop
+  build to test.
 - **Categories are folder names, not a list.** Since v0.1.9 `scan_vault` derives a document's
   category from its top-level folder under the vault root, so any folder you add becomes a
   category with no code change (there is no longer a `category_map` in `lib.rs`). The sidebar
@@ -80,14 +81,17 @@ CSV export, shared Supabase backend with per-user login, in-app Help, and auto-u
 
 ## Backend
 
-Supabase project `vuhvqqeywaaeaohplxlk` (URL `https://vuhvqqeywaaeaohplxlk.supabase.co`).
-Schema, RLS, auth, and "add a tech" steps in `BACKEND_SETUP.md`. Signing key in `~/.tauri/doccenter.key`
-(+ password in Keeper); GitHub repo `MenozziTechGroup/document-manager` holds the signing secrets.
+Supabase project URL and anon key are in `src/data/supabase.js` - public by design for a
+desktop client. Schema, RLS, auth, and "add a tech" steps in `BACKEND_SETUP.md`.
+
+**This repo is public.** Account names, secret locations and rollout state live in
+`OPERATIONS.local.md` beside this checkout (gitignored), not here. Releases are signed by
+a key held in GitHub Actions secrets; that file says where the local copy lives.
 
 ## Rollout status / remaining (Michael's manual steps)
 
 1. Install **v0.1.3** on each machine (last manual install; auto-update after).
-2. Create Supabase logins for Michael + 2 techs; delete `test@menozzi.tech`.
+2. Create Supabase logins for Michael + 2 techs; delete the development account (see `OPERATIONS.local.md`).
 3. Each person: sync the SharePoint library → Settings → Vault Folder → point at it → sign in.
 4. From the main machine: Settings → Account → "Migrate local library to cloud" once.
 

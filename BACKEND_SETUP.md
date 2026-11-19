@@ -102,8 +102,9 @@ archived to a new path and something else takes its old one, check the playbooks
 
 ## Housekeeping
 
-- The throwaway `test@menozzi.tech` account used during development can be deleted in
-  Supabase → Authentication → Users once you're done testing.
+- The development account should be deleted in Supabase → Authentication → Users. It is
+  named in `OPERATIONS.local.md` and deliberately not here: this repo is public, and RLS
+  grants any signed-in user full access, so a named account is the one thing worth hiding.
 - **Orphaned playbook members.** Rows in `playbook_members` whose `rel_key` no longer
   matches a document are harmless (see above) but accumulate. To list them, and only
   then decide whether to clear them:
