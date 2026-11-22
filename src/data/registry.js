@@ -6,11 +6,10 @@
 // to the built-in lists. See supabase/migrations/20261123_doc_id_registry.sql.
 import { supabase, currentEmail } from './supabase'
 import { DOC_ID_RE, parseDocId } from './docIds'
+import { NOT_FILED_STATUSES } from './health'
 
 export const ID_STATUSES = ['Reserved', 'Draft', 'Filed', 'Outside', 'Unlocated', 'Tool', 'Retired']
 
-// Statuses that become "Filed" once a document carrying the ID is saved in DocCenter
-const BECOMES_FILED = new Set(['Reserved', 'Draft', 'Unlocated', 'Outside'])
 
 async function q(promise) {
   const { data, error } = await promise
@@ -66,8 +65,9 @@ export async function allocateDocId(typeCode, domainCode, title = '') {
 
 /**
  * Record that a document carrying this ID was saved in DocCenter: a Reserved /
- * Draft / Unlocated / Outside entry becomes Filed; an ID not in the ledger is
- * added as Filed. Retired and Tool entries are left alone.
+ * Unlocated / Outside entry becomes Filed; an ID not in the ledger is added as
+ * Filed. Draft (in the library, still in development), Tool and Retired entries
+ * are left alone.
  */
 export async function recordDocIdUse(docId, title) {
   const p = parseDocId(docId)
@@ -79,7 +79,7 @@ export async function recordDocIdUse(docId, title) {
       doc_id: docId, type_code: p.type, domain_code: p.domain, seq: p.seq,
       title: title ?? '', status: 'Filed', issued_by: currentEmail(),
     }))
-  } else if (BECOMES_FILED.has(row.status)) {
+  } else if (NOT_FILED_STATUSES.has(row.status)) {
     await q(supabase.from('doc_ids').update({ status: 'Filed', title: row.title || title || '' }).eq('doc_id', docId))
   }
 }
@@ -209,8 +209,8 @@ export async function importRegistryJson(json, docs = []) {
 
 /**
  * The registry as an IDX-IT-001_Registry.json the IDX-IT-001 script can read.
- * A ledger entry counts as Filed when a library document carries its ID
- * (unless it's a Tool entry, which lives in a tool folder by design).
+ * A Reserved / Unlocated / Outside entry is exported as Filed when a library
+ * document carries its ID; Draft, Tool and Filed are exported as recorded.
  */
 export function buildRegistryJson(registry, docs = []) {
   const inLibrary = new Set(docs.map((d) => d.docId).filter(Boolean))
@@ -226,7 +226,7 @@ export function buildRegistryJson(registry, docs = []) {
     ids: live.map((e) => ({
       docId: e.docId,
       title: e.title,
-      status: e.status !== 'Tool' && inLibrary.has(e.docId) ? 'Filed' : e.status,
+      status: NOT_FILED_STATUSES.has(e.status) && inLibrary.has(e.docId) ? 'Filed' : e.status,
       notes: e.notes || null,
     })),
     retired: registry.ids.filter((e) => e.status === 'Retired')

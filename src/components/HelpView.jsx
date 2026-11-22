@@ -87,7 +87,7 @@ export default function HelpView() {
           <Q q="Doc ID, version & effective date come from the file">
             Every <strong>Sync Vault</strong> reads each document's own properties and cover page (or a script's
             <span style={{ fontFamily: 'monospace' }}> # Version / # Updated</span> header) and fills in its Doc ID, version,
-            effective date and status (Approved → Active). The file is the record, so these fields are locked in the
+            effective date and status (Approved → Active), and fills a blank Domain from the Doc ID. The file is the record, so these fields are locked in the
             edit form when the file provides them. A copy that hasn't finished syncing (an older version) never rolls a
             document back, and archived documents stay archived. Use <strong>Reload from file</strong> on one document
             without a full sync. A warning shows when the filename's Doc ID differs from the document's.
@@ -100,6 +100,13 @@ export default function HelpView() {
             unregistered codes are refused; a filename that doesn't follow DOC-ID_Title is only a warning. Superseding a
             document with a new ID retires the old one. <strong>Export for IDX-IT-001</strong> writes the registry
             JSON the IDX-IT-001 document is built from.
+          </Q>
+          <Q q="Registry health & the Excel inventory">
+            The registry's <strong>Health</strong> tab lists where the registry and what's filed disagree: duplicate IDs,
+            retired IDs on live documents, IDs the registry never recorded, ledger entries with no document, files missing
+            on this machine, filename/ID mismatches and documents in the wrong type folder — with Open and one-click fixes
+            where one is safe. <strong>Export to Excel</strong> (Registry or Settings) saves the live inventory plus every
+            registry sheet and the health report in one workbook.
           </Q>
           <Q q="Review dates & version notes">
             Set a <strong>review date</strong> to get reminded (and flagged on the dashboard) when a doc is due for a

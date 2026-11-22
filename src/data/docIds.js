@@ -34,6 +34,20 @@ export function typeCodeForCategory(category, registry) {
 }
 
 /**
+ * The type code expected for this document where it's filed. A file sitting
+ * at the top of the library (no folder in its vault-relative path) is checked
+ * against the type registered to "Library root" (IDX-IT-001 lives there).
+ */
+export function expectedTypeCode(doc, registry) {
+  const atRoot = !!doc.relKey && !doc.relKey.includes('/')
+  if (atRoot) {
+    const rootType = registry?.types?.find((t) => /library root/i.test(t.folder))
+    if (rootType) return rootType.code
+  }
+  return typeCodeForCategory(doc.category, registry)
+}
+
+/**
  * Checks a document before it is saved.
  *   doc       the form values being saved
  *   original  the stored document when editing (null when adding)
@@ -83,7 +97,7 @@ export function validateDocument({ doc, original, docs, registry, script = false
   const clash = docs.find((d) => d.docId === id && d.id !== doc.id)
   if (clash) problem(`${id} is already used by “${clash.title}”.`)
 
-  const expectedType = typeCodeForCategory(doc.category, registry)
+  const expectedType = expectedTypeCode(doc, registry)
   if (expectedType && expectedType !== parsed.type) {
     warnings.push(`${id} is a ${parsed.type}, but the ${doc.category} folder holds ${expectedType} documents.`)
   }

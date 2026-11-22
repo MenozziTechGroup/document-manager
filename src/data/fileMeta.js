@@ -116,7 +116,9 @@ export function compareVersions(a, b) {
  *  - a field changes only when the file actually provides a value;
  *  - a file whose version is OLDER than the library's changes nothing — that's
  *    a machine whose SharePoint copy hasn't synced yet, not a rollback;
- *  - an Archived document stays archived (superseding is a library decision).
+ *  - an Archived document stays archived (superseding is a library decision);
+ *  - a BLANK domain is filled from the Doc ID (SOP-MDM-003 → MDM); a domain
+ *    someone set by hand is never overwritten.
  */
 export function fileMetaChanges(doc, meta) {
   if (!meta) return {}
@@ -128,12 +130,14 @@ export function fileMetaChanges(doc, meta) {
   if (meta.version && meta.version !== doc.version) changes.version = meta.version
   if (meta.effectiveDate && meta.effectiveDate !== doc.effectiveDate) changes.effectiveDate = meta.effectiveDate
   if (meta.status && doc.status !== 'archived' && meta.status !== doc.status) changes.status = meta.status
+  const domain = (changes.docId ?? doc.docId ?? '').split('-')[1]
+  if (!doc.domain && domain && /^[A-Z]{2,4}-[A-Z0-9]{2,5}-\d{3}$/.test(changes.docId ?? doc.docId)) changes.domain = domain
   return changes
 }
 
 /** One-line description of applied changes, for the audit log. */
 export function describeChanges(doc, changes) {
-  const label = { docId: 'Doc ID', version: 'version', effectiveDate: 'effective date', status: 'status' }
+  const label = { docId: 'Doc ID', version: 'version', effectiveDate: 'effective date', status: 'status', domain: 'domain' }
   return Object.entries(changes)
     .map(([k, v]) => `${label[k]} ${doc[k] || '(blank)'} → ${v}`)
     .join('; ')

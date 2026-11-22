@@ -117,10 +117,13 @@ a key held in GitHub Actions secrets; that file says where the local copy lives.
 
 ## In progress
 
-**Doc ID Registry** — v0.1.13 ships the tables, import, Registry page, validation, Reserve next,
-Supersede → retire, and JSON export. Still to build (v0.1.14): the health report (ledger vs
-SharePoint mismatches) and Excel export of inventory + registry. Then switch the IDX-IT-001
-DocBuilder script to read DocCenter's export instead of its own hardcoded lists.
+**Doc ID Registry** — v0.1.13 shipped the tables, import, Registry page, validation, Reserve next,
+Supersede → retire, and JSON export; v0.1.14 adds the Health tab (`src/data/health.js`) and the Excel
+workbook (`src/data/excelExport.js`, exceljs loaded on demand, saved via `write_binary_file`). Next:
+switch the IDX-IT-001 DocBuilder script to read DocCenter's export instead of its hardcoded lists,
+then add a unique constraint on `documents.doc_id` once the duplicates are cleaned up.
+Registry status vocabulary: Reserved, Draft (in the library, still in development — never auto-flipped),
+Filed, Outside, Unlocated, Tool, Retired.
 Doc ID format is `TYPE-DOMAIN-NNN`; filenames are `[DOC-ID]_[Title_With_Underscores].docx`
 (optionally `_vN.N`; script titles may use hyphens). Retired IDs are never reused.
 

@@ -244,9 +244,9 @@ export async function syncScannedDocuments(items) {
   return { added, relinked, addedIds }
 }
 
-/** Write only the file-sourced fields (Doc ID, version, effective date, status). */
+/** Write only the file-sourced fields (Doc ID, version, effective date, status, blank domain). */
 export async function updateFileMeta(id, changes) {
-  const cols = { docId: 'doc_id', version: 'version', effectiveDate: 'effective_date', status: 'status' }
+  const cols = { docId: 'doc_id', version: 'version', effectiveDate: 'effective_date', status: 'status', domain: 'domain' }
   const row = Object.fromEntries(Object.entries(changes).map(([k, v]) => [cols[k], v]))
   const { error } = await supabase.from('documents')
     .update({ ...row, updated_at: new Date().toISOString(), updated_by: currentEmail() })

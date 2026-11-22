@@ -899,7 +899,19 @@ ${err.message ?? err}`)
             </div>
           ) : view === 'registry' && searchResults === null ? (
             <div className="flex-1 overflow-hidden" style={{ background: 'var(--app-bg)' }}>
-              <RegistryView registry={registry} docs={docs} onChanged={reloadRegistry} vaultPath={vaultPath} />
+              <RegistryView
+                registry={registry}
+                docs={docs}
+                onChanged={reloadRegistry}
+                vaultPath={vaultPath}
+                missingIds={missingIds}
+                onOpenDoc={(id) => {
+                  const d = docs.find((x) => x.id === id)
+                  if (!d) return
+                  navigate('all')
+                  setSelectedDoc(d)
+                }}
+              />
             </div>
           ) : view === 'help' && searchResults === null ? (
             <div className="flex-1 overflow-hidden" style={{ background: 'var(--app-bg)' }}>

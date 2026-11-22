@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { isTauri } from '../data/db'
+import { exportWorkbook } from '../data/excelExport'
 import {
   getTags, addTag, deleteTag,
   writeMetadataBackup, readMetadataBackup, importMetadata, reindexAll,
@@ -53,6 +54,16 @@ export default function SettingsPanel({
     await setSetting('technicianName', techName.trim())
     setTechSaved(true)
     setTimeout(() => setTechSaved(false), 2000)
+  }
+
+  const exportExcel = async () => {
+    setCsvMsg('')
+    try {
+      const saved = await exportWorkbook({ vaultPath })
+      if (saved) setCsvMsg(isTauri() ? `Saved ${saved}` : 'Downloaded.')
+    } catch (err) {
+      setCsvMsg(`Export failed: ${err?.message ?? err}`)
+    }
   }
 
   const exportCsv = async () => {
@@ -361,12 +372,18 @@ export default function SettingsPanel({
         <section>
           <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--mits-charcoal)' }}>Export Library</h2>
           <p className="text-xs mb-4" style={{ color: '#6b7280' }}>
-            Export the full document inventory (Doc IDs, titles, types, domains, status, clients, review dates, tags, paths) to a
-            CSV file — handy for reporting, audits, or sharing the library list outside the app.
+            <strong>Excel</strong> is the live document inventory: every document (Doc ID, type, domain, status, version, effective
+            date, registry status, path), plus — when signed in — the Doc ID Registry sheets and the health report.
+            <strong> CSV</strong> is the plain inventory list.
           </p>
-          <button onClick={exportCsv} className="text-sm px-4 py-2 rounded border transition-colors hover:bg-gray-50" style={{ borderColor: '#d1d5db', color: '#374151' }}>
-            Export to CSV
-          </button>
+          <div className="flex gap-2">
+            <button onClick={exportExcel} className="text-sm px-4 py-2 rounded text-white" style={{ background: 'var(--mits-red)' }}>
+              Export to Excel
+            </button>
+            <button onClick={exportCsv} className="text-sm px-4 py-2 rounded border transition-colors hover:bg-gray-50" style={{ borderColor: '#d1d5db', color: '#374151' }}>
+              Export to CSV
+            </button>
+          </div>
           {csvMsg && (
             <div className="text-xs mt-2" style={{ color: csvMsg.includes('failed') ? '#dc2626' : '#166534' }}>{csvMsg}</div>
           )}

@@ -125,6 +125,17 @@ fn write_text_file(path: String, contents: String) -> Result<(), String> {
   fs::write(p, contents).map_err(|e| e.to_string())
 }
 
+/// Writes raw bytes to a file, creating parent directories as needed.
+/// Used for the Excel export (.xlsx is a binary zip).
+#[tauri::command]
+fn write_binary_file(path: String, contents: Vec<u8>) -> Result<(), String> {
+  let p = Path::new(&path);
+  if let Some(parent) = p.parent() {
+    fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+  }
+  fs::write(p, contents).map_err(|e| e.to_string())
+}
+
 /// Reads UTF-8 text from a file. Returns an empty string if the file is missing.
 #[tauri::command]
 fn read_text_file(path: String) -> Result<String, String> {
@@ -481,6 +492,7 @@ pub fn run() {
       scan_vault,
       paths_exist,
       write_text_file,
+      write_binary_file,
       read_text_file,
       import_into_vault,
       convert_to_pdf,

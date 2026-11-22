@@ -3,8 +3,10 @@ import { isTauri } from '../data/db'
 import { logEvent } from '../data/repo'
 import {
   ID_STATUSES, importRegistryJson, buildRegistryJson, retireDocId, releaseReservedId,
-  updateIdEntry, saveDomain, saveType, addIssue, resolveIssue,
+  updateIdEntry, saveDomain, saveType, addIssue, resolveIssue, recordDocIdUse,
 } from '../data/registry'
+import { registryHealth, healthCounts } from '../data/health'
+import { exportWorkbook } from '../data/excelExport'
 
 const REGISTRY_FILE = 'IDX-IT-001_Registry.json'
 
@@ -19,6 +21,7 @@ const STATUS_STYLE = {
 }
 
 const TABS = [
+  { id: 'health', label: 'Health' },
   { id: 'ledger', label: 'ID Ledger' },
   { id: 'series', label: 'Next Available' },
   { id: 'types', label: 'Type Codes' },
@@ -29,8 +32,8 @@ const TABS = [
 
 const joinPath = (dir, name) => (dir ? `${dir.replace(/[\\/]$/, '')}${dir.includes('\\') ? '\\' : '/'}${name}` : name)
 
-export default function RegistryView({ registry, docs, onChanged, vaultPath }) {
-  const [tab, setTab] = useState('ledger')
+export default function RegistryView({ registry, docs, onChanged, vaultPath, missingIds, onOpenDoc }) {
+  const [tab, setTab] = useState('health')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(null) // { text, error }
 
@@ -111,7 +114,27 @@ export default function RegistryView({ registry, docs, onChanged, vaultPath }) {
     }
   }
 
+  const handleExcel = async () => {
+    setBusy(true)
+    try {
+      const saved = await exportWorkbook({ vaultPath })
+      if (saved) {
+        logEvent('Inventory exported', saved)
+        flash(isTauri() ? `Saved ${saved}` : `Downloaded ${saved}`)
+      }
+    } catch (err) {
+      flash(`Excel export failed: ${err?.message ?? err}`, true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const empty = !registry || registry.ids.length === 0
+  const checks = useMemo(
+    () => (registry ? registryHealth({ registry, docs, missingIds }) : []),
+    [registry, docs, missingIds],
+  )
+  const counts = healthCounts(checks)
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -127,11 +150,16 @@ export default function RegistryView({ registry, docs, onChanged, vaultPath }) {
             <button onClick={handleImport} disabled={busy} className="text-xs px-3 py-1.5 rounded border" style={{ borderColor: '#d1d5db', color: '#374151' }}>
               Import JSON…
             </button>
-            {!empty && (
-              <button onClick={handleExport} disabled={busy} className="text-xs px-3 py-1.5 rounded text-white" style={{ background: 'var(--mits-red)' }}>
+            {!empty && <>
+              <button onClick={handleExcel} disabled={busy} className="text-xs px-3 py-1.5 rounded border" style={{ borderColor: '#d1d5db', color: '#374151' }}
+                title="Inventory, ledger, codes, retired IDs, issues, folder map and health in one workbook">
+                Export to Excel…
+              </button>
+              <button onClick={handleExport} disabled={busy} className="text-xs px-3 py-1.5 rounded text-white" style={{ background: 'var(--mits-red)' }}
+                title="IDX-IT-001_Registry.json — what the IDX-IT-001 document is built from">
                 Export for IDX-IT-001…
               </button>
-            )}
+            </>}
           </div>
         )}
       </div>
@@ -162,11 +190,16 @@ export default function RegistryView({ registry, docs, onChanged, vaultPath }) {
         </Notice>
       ) : (
         <>
-          <div className="flex gap-1 px-4 pt-3 border-b" style={{ borderColor: '#e5e7eb' }}>
+          <div className="flex gap-1 px-4 pt-3 border-b overflow-x-auto" style={{ borderColor: '#e5e7eb' }}>
             {TABS.map((t) => (
-              <button key={t.id} onClick={() => setTab(t.id)} className="text-xs px-3 py-1.5 -mb-px border-b-2"
+              <button key={t.id} onClick={() => setTab(t.id)} className="text-xs px-3 py-1.5 -mb-px border-b-2 whitespace-nowrap"
                 style={{ borderColor: tab === t.id ? 'var(--mits-red)' : 'transparent', color: tab === t.id ? 'var(--mits-charcoal)' : '#6b7280', fontWeight: tab === t.id ? 600 : 400 }}>
                 {t.label}
+                {t.id === 'health' && counts.error + counts.warning > 0 && (
+                  <span className="ml-1.5 px-1.5 rounded-full" style={{ background: counts.error ? '#fee2e2' : '#ffedd5', color: counts.error ? '#b91c1c' : '#c2410c' }}>
+                    {counts.error + counts.warning}
+                  </span>
+                )}
                 {t.id === 'issues' && registry.issues.some((i) => i.status === 'open') && (
                   <span className="ml-1.5 px-1.5 rounded-full" style={{ background: '#fee2e2', color: '#b91c1c' }}>
                     {registry.issues.filter((i) => i.status === 'open').length}
@@ -176,6 +209,7 @@ export default function RegistryView({ registry, docs, onChanged, vaultPath }) {
             ))}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
+            {tab === 'health' && <Health checks={checks} counts={counts} run={run} busy={busy} onOpenDoc={onOpenDoc} />}
             {tab === 'ledger' && <Ledger registry={registry} docs={docs} run={run} busy={busy} />}
             {tab === 'series' && <Series registry={registry} />}
             {tab === 'types' && <Types registry={registry} run={run} busy={busy} />}
@@ -185,6 +219,69 @@ export default function RegistryView({ registry, docs, onChanged, vaultPath }) {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+// ── Health ─────────────────────────────────────────────────────────
+const SEVERITY_STYLE = {
+  error:   { border: '#fca5a5', bg: '#fff5f5', color: '#b91c1c', label: 'Error' },
+  warning: { border: '#fed7aa', bg: '#fffbf5', color: '#c2410c', label: 'Warning' },
+  info:    { border: '#e5e7eb', bg: 'white',   color: '#6b7280', label: 'Info' },
+}
+
+function Health({ checks, counts, run, busy, onOpenDoc }) {
+  const [open, setOpen] = useState({}) // key → expanded
+  const applyFix = (fix) => run(async () => {
+    if (fix.kind === 'record') await recordDocIdUse(fix.docId, fix.title)
+    else if (fix.kind === 'status') await updateIdEntry(fix.docId, { status: fix.status })
+    logEvent('Registry health fix', `${fix.docId}: ${fix.label}`)
+  }, `${fix.docId}: ${fix.label.toLowerCase()} — done.`)
+
+  if (!checks.length) {
+    return <div className="text-sm py-10 text-center" style={{ color: '#15803d' }}>✓ The registry and the library agree — nothing to fix.</div>
+  }
+  return (
+    <div className="space-y-2">
+      <div className="text-xs mb-1" style={{ color: '#6b7280' }}>
+        Where the registry and what’s filed in SharePoint disagree: {counts.error} error{counts.error === 1 ? '' : 's'},{' '}
+        {counts.warning} warning{counts.warning === 1 ? '' : 's'}, {counts.info} for information.
+        File checks reflect this machine’s synced copy of the library.
+      </div>
+      {checks.map((c) => {
+        const st = SEVERITY_STYLE[c.severity]
+        const expanded = open[c.key] ?? c.severity !== 'info'
+        return (
+          <div key={c.key} className="rounded-lg border text-xs" style={{ borderColor: st.border, background: st.bg }}>
+            <button className="w-full flex items-center gap-2 px-3 py-2 text-left" onClick={() => setOpen((o) => ({ ...o, [c.key]: !expanded }))}>
+              <span className="font-semibold px-1.5 rounded" style={{ color: st.color }}>{st.label}</span>
+              <span className="font-semibold flex-1" style={{ color: 'var(--mits-charcoal)' }}>{c.title}</span>
+              <span className="px-1.5 rounded-full" style={{ background: 'white', color: st.color }}>{c.items.length}</span>
+              <span style={{ color: '#9ca3af' }}>{expanded ? '▾' : '▸'}</span>
+            </button>
+            {expanded && (
+              <div className="px-3 pb-2">
+                <div className="mb-1.5" style={{ color: '#4b5563' }}>{c.explain}</div>
+                <table className="w-full">
+                  <tbody>
+                    {c.items.map((i, n) => (
+                      <tr key={`${i.docId}-${i.docRefId ?? n}`} className="border-t align-top" style={{ borderColor: 'rgba(0,0,0,0.05)' }}>
+                        <Td className="font-mono whitespace-nowrap">{i.docId || '—'}</Td>
+                        <Td>{i.title}</Td>
+                        <Td style={{ color: '#6b7280' }}>{i.detail}</Td>
+                        <Td className="whitespace-nowrap text-right">
+                          {i.docRefId && onOpenDoc && <LinkBtn onClick={() => onOpenDoc(i.docRefId)}>Open</LinkBtn>}
+                          {i.fix && <LinkBtn disabled={busy} onClick={() => applyFix(i.fix)}>{i.fix.label}</LinkBtn>}
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
