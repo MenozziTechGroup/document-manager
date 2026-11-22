@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { isTauri } from '../data/db'
 import { CATEGORY_MAP, STATUS_MAP, DOMAIN_MAP, isScript, reviewStatus } from '../data/categories'
+import { docIdFromFileName, fileNameIdMismatch } from '../data/fileMeta'
 
 async function openFile(filePath) {
   if (!isTauri()) {
@@ -51,7 +52,7 @@ function sharePointLink(localPath, vaultPath, baseUrl) {
 
 export default function PreviewPane({
   doc, groups, onEdit, onDelete, onAddToGroup,
-  onToggleFavorite, onOpened, onGeneratePdf, onSupersede, onPreviewPdf, vaultPath, sharePointUrl, isMissing,
+  onToggleFavorite, onOpened, onGeneratePdf, onSupersede, onPreviewPdf, onReloadFromFile, vaultPath, sharePointUrl, isMissing,
 }) {
   const [copied, setCopied] = useState('')
 
@@ -250,6 +251,9 @@ export default function PreviewPane({
           {onSupersede && (
             <QuickAction onClick={() => onSupersede(doc)}>Supersede…</QuickAction>
           )}
+          {onReloadFromFile && !isMissing && (
+            <QuickAction onClick={() => onReloadFromFile(doc)}>Reload from file</QuickAction>
+          )}
         </div>
       </div>
 
@@ -258,6 +262,19 @@ export default function PreviewPane({
         {doc.docId && (
           <Row label="Document ID">
             <span className="text-xs font-mono font-semibold" style={{ color: 'var(--mits-charcoal)' }}>{doc.docId}</span>
+          </Row>
+        )}
+        {fileNameIdMismatch(doc) && (
+          <div className="text-xs px-2 py-1.5 rounded" style={{ background: '#fff7ed', color: '#c2410c' }}>
+            ⚠ The filename says <span className="font-mono">{docIdFromFileName(doc.fileName)}</span> but the
+            document is recorded as <span className="font-mono">{doc.docId}</span>.
+          </div>
+        )}
+
+        {doc.version && <Row label="Version">{doc.version}</Row>}
+        {doc.effectiveDate && (
+          <Row label="Effective date">
+            <EffectiveDate value={doc.effectiveDate} />
           </Row>
         )}
 
@@ -289,7 +306,6 @@ export default function PreviewPane({
           </span>
         </Row>
 
-        {doc.version && <Row label="Version">{doc.version}</Row>}
         {doc.clientName && <Row label="Client">{doc.clientName}</Row>}
         {doc.audience === 'Client' && (
           <Row label="Audience">
@@ -390,6 +406,16 @@ function QuickAction({ onClick, children }) {
     >
       {children}
     </button>
+  )
+}
+
+/** An ISO date shows as-is; anything else ("Pending approval") gets an amber chip. */
+export function EffectiveDate({ value }) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return <span className="text-sm">{value}</span>
+  return (
+    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#fef3c7', color: '#b45309' }}>
+      {value}
+    </span>
   )
 }
 

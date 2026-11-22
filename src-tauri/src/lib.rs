@@ -9,6 +9,7 @@ use walkdir::WalkDir;
 use serde::Serialize;
 use std::path::Path;
 use std::fs;
+use std::collections::HashMap;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
@@ -236,13 +237,60 @@ fn extract_docx_text(path: String) -> Result<String, String> {
       _ => {}
     }
   }
-  let out = out
-    .replace("&amp;", "&")
-    .replace("&lt;", "<")
+  Ok(unescape_xml(&out))
+}
+
+fn unescape_xml(s: &str) -> String {
+  s.replace("&lt;", "<")
     .replace("&gt;", ">")
     .replace("&quot;", "\"")
-    .replace("&apos;", "'");
-  Ok(out)
+    .replace("&apos;", "'")
+    .replace("&amp;", "&")
+}
+
+/// Returns the text between the first `start` and the following `end`.
+fn between<'a>(s: &'a str, start: &str, end: &str) -> Option<&'a str> {
+  let i = s.find(start)? + start.len();
+  let j = s[i..].find(end)? + i;
+  Some(&s[i..j])
+}
+
+#[derive(Serialize)]
+pub struct DocxProps {
+  pub props: HashMap<String, String>,
+  pub title: String,
+}
+
+/// Reads the properties DocBuilder stamps into a .docx: the custom properties
+/// (DocID, DocVersion, DocStatus) from docProps/custom.xml and the title from
+/// docProps/core.xml. A file without these parts just returns them empty.
+#[tauri::command]
+fn read_docx_props(path: String) -> Result<DocxProps, String> {
+  use std::io::Read;
+  let file = fs::File::open(&path).map_err(|e| e.to_string())?;
+  let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+  let mut read_part = |name: &str| -> String {
+    let mut s = String::new();
+    if let Ok(mut entry) = archive.by_name(name) {
+      let _ = entry.read_to_string(&mut s);
+    }
+    s
+  };
+  let custom = read_part("docProps/custom.xml");
+  let core = read_part("docProps/core.xml");
+
+  // Each <property name="X"> holds one typed value, e.g. <vt:lpwstr>SOP-DNS-001</vt:lpwstr>
+  let mut props = HashMap::new();
+  for chunk in custom.split("<property ").skip(1) {
+    let Some(name) = between(chunk, "name=\"", "\"") else { continue };
+    let value = chunk
+      .find("<vt:")
+      .and_then(|i| between(&chunk[i..], ">", "</vt:"))
+      .unwrap_or("");
+    props.insert(name.to_string(), unescape_xml(value.trim()));
+  }
+  let title = between(&core, "<dc:title>", "</dc:title>").map(unescape_xml).unwrap_or_default();
+  Ok(DocxProps { props, title })
 }
 
 /// Extracts plain text from a PDF for full-text search of PDF-only documents
@@ -404,6 +452,14 @@ pub fn run() {
       "#,
       kind: MigrationKind::Up,
     },
+    Migration {
+      version: 9,
+      description: "effective_date",
+      sql: r#"
+        ALTER TABLE documents ADD COLUMN effective_date TEXT NOT NULL DEFAULT '';
+      "#,
+      kind: MigrationKind::Up,
+    },
   ];
 
   tauri::Builder::default()
@@ -428,6 +484,7 @@ pub fn run() {
       read_text_file,
       import_into_vault,
       convert_to_pdf,
+      read_docx_props,
       extract_docx_text,
       extract_pdf_text
     ])

@@ -43,17 +43,22 @@ Internal name/identifier stays `tech.menozzi.docmanager` and the DB file is
 - `src/data/categories.js` — CATEGORIES (display color + type code for *known* folder names),
   DOMAINS (incl. `HR`), PHASES, AUDIENCES, helpers. `getCategoryInfo()` gives unknown folders a
   neutral default with **no type code**.
-- `src-tauri/src/lib.rs` — Rust: SQLite migrations (currently up to **v8**), and commands:
+- `src-tauri/src/lib.rs` — Rust: SQLite migrations (currently up to **v9**), and commands:
   `scan_vault` (category = the file's **nearest parent folder name**, verbatim; max depth 3),
   `paths_exist`,
   `write_text_file`/`read_text_file`, `import_into_vault`, `convert_to_pdf` (Word COM via
-  PowerShell), `extract_docx_text`, `extract_pdf_text`.
+  PowerShell), `extract_docx_text`, `extract_pdf_text`, `read_docx_props` (DocBuilder custom
+  properties DocID/DocVersion/DocStatus + core title).
+- `src/data/fileMeta.js` — pure parsing of file-sourced metadata (properties → cover table /
+  script header → filename) and the rules for applying it (`fileMetaChanges`).
 
 ## Features (all built)
 
 Vault scan + paired docx/PDF, dynamic folder-based categories (v0.1.9), new-documents metadata
 review after a scan (v0.1.10), Smart Import (+ auto-PDF), Doc IDs + type/domain/audience taxonomy
-(Doc ID is free text today; "Suggest" = highest existing number + 1),
+Doc ID / version / effective date / status **read from the files on every scan** (v0.1.12; file
+wins, never rolls back to an older version, archived stays archived; "Suggest" = highest existing
+number + 1 until the registry lands),
 review dates + reminders, version notes, source-chat links, favorites/recent, full-text search
 (docx + pdf), sort/filter, bulk ops, By Type/Domain/Client browse, Playbooks 2.0 (phases + runnable
 runs), Scripts as a type, metadata backup, missing-file relink, audit log, drag-drop, Ctrl+K,
@@ -73,7 +78,7 @@ CSV export, shared Supabase backend with per-user login, in-app Help, and auto-u
   and type code instead of the neutral grey fallback in `getCategoryInfo()`. **Adding a domain:**
   edit `DOMAINS` in `categories.js`.
 - **DB migration:** append to the `migrations` array in `lib.rs` in **ascending version
-  order** (next is v9).
+  order** (next is v10).
 - **Release:** bump version in `src-tauri/tauri.conf.json`, `package.json`, `src-tauri/Cargo.toml`,
   and the `app` entry in `src-tauri/Cargo.lock` → commit → **merge to `main`** (the workflow
   fires on any `v*` tag, so tagging an unmerged branch ships a release `main` never sees) →

@@ -7,8 +7,9 @@ import {
   getDocumentGroupIds, addToGroup, setFavorite, markOpened, findMissingDocIds, writeMetadataBackup,
   importFileToVault, convertToPdf, indexMissing,
   getRuns, getRun, startRun, toggleRunItem, setRunStatus, deleteRun,
-  logEvent,
+  logEvent, applyFileMetadata, readFileMeta,
 } from './data/repo'
+import { describeChanges } from './data/fileMeta'
 import { reviewStatus, DOMAIN_MAP } from './data/categories'
 import { isCloudConfigured, getSession, onAuthChange, signOut, currentUserEmail } from './data/supabase'
 import { setVaultRoot, subscribeChanges } from './data/cloud'
@@ -349,11 +350,20 @@ export default function App() {
       // Reconcile: insert new, relink moved/renamed files, refresh existing
       const { added, relinked, addedIds } = await syncScannedDocuments(items)
 
+      // Pull Doc ID / version / effective date / status from the files themselves
+      setScanMessage('Reading document properties…')
+      const fromFiles = await applyFileMetadata(await getDocuments())
+      for (const { doc, changes } of fromFiles) {
+        logEvent('Metadata read from file', `${doc.title}: ${describeChanges(doc, changes)}`)
+      }
+
       const allDocs = await getDocuments()
       setDocs(allDocs)
+      setSelectedDoc((cur) => (cur ? allDocs.find((d) => d.id === cur.id) ?? cur : cur))
       const parts = []
       if (added > 0) parts.push(`${added} new`)
       if (relinked > 0) parts.push(`${relinked} relinked`)
+      if (fromFiles.length > 0) parts.push(`${fromFiles.length} updated from file`)
       setScanMessage(parts.length ? `Synced: ${parts.join(', ')}.` : 'Vault is up to date.')
       if (addedIds && addedIds.length > 0) setNewDocIds(addedIds)
       if (parts.length) logEvent('Vault synced', parts.join(', '))
@@ -416,6 +426,26 @@ export default function App() {
     } finally {
       setTimeout(() => setScanMessage(''), 3000)
     }
+  }, [])
+
+  // Re-read one document's Doc ID / version / effective date / status from its file
+  const handleReloadFromFile = useCallback(async (doc) => {
+    if (!(await readFileMeta(doc))) {
+      setScanMessage('Could not read that file.')
+      setTimeout(() => setScanMessage(''), 3000)
+      return
+    }
+    const [result] = await applyFileMetadata([doc])
+    if (result) {
+      const updatedDoc = { ...doc, ...result.changes }
+      setDocs((prev) => prev.map((d) => (d.id === doc.id ? updatedDoc : d)))
+      setSelectedDoc((cur) => (cur && cur.id === doc.id ? updatedDoc : cur))
+      logEvent('Metadata read from file', `${doc.title}: ${describeChanges(doc, result.changes)}`)
+      setScanMessage(`Updated from file: ${describeChanges(doc, result.changes)}`)
+    } else {
+      setScanMessage('Already matches the file.')
+    }
+    setTimeout(() => setScanMessage(''), 4000)
   }, [])
 
   // ── Onboarding complete ────────────────────────────────────
@@ -904,6 +934,7 @@ export default function App() {
                   onGeneratePdf={handleGeneratePdf}
                   onSupersede={(d) => setSupersedeFor(d)}
                   onPreviewPdf={(d) => setPdfPreviewDoc(d)}
+                  onReloadFromFile={isTauri() ? handleReloadFromFile : null}
                   vaultPath={vaultPath}
                   sharePointUrl={sharePointUrl}
                   isMissing={selectedDoc ? missingIds.has(selectedDoc.id) : false}

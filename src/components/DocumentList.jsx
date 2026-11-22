@@ -9,6 +9,7 @@ const SORT_OPTIONS = [
   { id: 'oldest',      label: 'Date Added ↑' },
   { id: 'updated',     label: 'Recently Updated' },
   { id: 'review',      label: 'Review Date ↑' },
+  { id: 'effective',   label: 'Effective Date ↓' },
 ]
 
 export default function DocumentList({
@@ -99,6 +100,12 @@ export default function DocumentList({
         case 'newest': return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
         case 'oldest': return (a.createdAt ?? '').localeCompare(b.createdAt ?? '')
         case 'updated': return (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '')
+        case 'effective': {
+          // Newest effective date first; non-dates ("Pending approval") and blanks last
+          const ea = /^\d{4}-\d{2}-\d{2}$/.test(a.effectiveDate ?? '') ? a.effectiveDate : ''
+          const eb = /^\d{4}-\d{2}-\d{2}$/.test(b.effectiveDate ?? '') ? b.effectiveDate : ''
+          return eb.localeCompare(ea) || a.title.localeCompare(b.title)
+        }
         case 'review': {
           const ra = reviewStatus(a.reviewBy)
           const rb = reviewStatus(b.reviewBy)

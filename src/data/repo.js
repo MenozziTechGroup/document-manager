@@ -1,6 +1,8 @@
 import { getDb, isTauri, lsGet, lsSet, rowToDoc, rowToGroup } from './db'
 import * as cloud from './cloud'
 import { useCloud } from './supabase'
+import { isScript } from './categories'
+import { buildFileMeta, fileMetaChanges } from './fileMeta'
 
 const LS_DOCS = 'docmanager-docs-v1'
 const LS_GROUPS = 'docmanager-groups-v1'
@@ -19,7 +21,7 @@ const DOC_COLS = [
   'id', 'title', 'category', 'file_path', 'file_name', 'file_type',
   'docx_path', 'pdf_path', 'description', 'status', 'tags', 'version',
   'client_name', 'review_by', 'version_notes', 'favorite', 'last_opened',
-  'source_url', 'doc_id', 'domain', 'audience', 'created_at', 'updated_at',
+  'source_url', 'doc_id', 'domain', 'audience', 'effective_date', 'created_at', 'updated_at',
 ].join(', ')
 
 // ============================================================
@@ -83,8 +85,8 @@ export async function createDocument(doc) {
       `INSERT INTO documents
        (id, title, category, file_path, file_name, file_type, docx_path, pdf_path,
         description, status, tags, version, client_name, review_by, version_notes, source_url,
-        doc_id, domain, audience)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+        doc_id, domain, audience, effective_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        ON CONFLICT(file_path) DO UPDATE SET
          docx_path  = excluded.docx_path,
          pdf_path   = excluded.pdf_path,
@@ -96,6 +98,7 @@ export async function createDocument(doc) {
         JSON.stringify(record.tags ?? []), record.version ?? '', record.clientName ?? '',
         record.reviewBy ?? '', record.versionNotes ?? '', record.sourceUrl ?? '',
         record.docId ?? '', record.domain ?? '', record.audience ?? 'Internal',
+        record.effectiveDate ?? '',
       ]
     )
   } else {
@@ -163,7 +166,7 @@ export async function updateDocument(doc) {
         docx_path=$7, pdf_path=$8,
         description=$9, status=$10, tags=$11, version=$12, client_name=$13,
         review_by=$14, version_notes=$15, favorite=$16, source_url=$17,
-        doc_id=$18, domain=$19, audience=$20,
+        doc_id=$18, domain=$19, audience=$20, effective_date=$21,
         updated_at=datetime('now')
        WHERE id=$1`,
       [
@@ -173,6 +176,7 @@ export async function updateDocument(doc) {
         doc.version ?? '', doc.clientName ?? '',
         doc.reviewBy ?? '', doc.versionNotes ?? '', doc.favorite ? 1 : 0, doc.sourceUrl ?? '',
         doc.docId ?? '', doc.domain ?? '', doc.audience ?? 'Internal',
+        doc.effectiveDate ?? '',
       ]
     )
   } else {
@@ -673,10 +677,10 @@ export async function getAuditLog(limit = 100) {
 /** Build a CSV string of the whole library for export. */
 export async function buildDocumentsCsv() {
   const docs = await getDocuments()
-  const cols = ['Doc ID', 'Title', 'Type', 'Domain', 'Status', 'Version', 'Client', 'Audience', 'Review By', 'Tags', 'Has PDF', 'File Path']
+  const cols = ['Doc ID', 'Title', 'Type', 'Domain', 'Status', 'Version', 'Effective Date', 'Client', 'Audience', 'Review By', 'Tags', 'Has PDF', 'File Path']
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
   const rows = docs.map((d) => [
-    d.docId, d.title, d.category, d.domain, d.status, d.version, d.clientName,
+    d.docId, d.title, d.category, d.domain, d.status, d.version, d.effectiveDate, d.clientName,
     d.audience, d.reviewBy, (d.tags ?? []).join('; '), d.pdfPath ? 'Yes' : 'No', d.filePath,
   ].map(esc).join(','))
   return [cols.map(esc).join(','), ...rows].join('\r\n')
@@ -798,6 +802,53 @@ export async function convertToPdf(src) {
   if (!isTauri()) throw new Error('PDF conversion is only available in the desktop app.')
   const { invoke } = await import('@tauri-apps/api/core')
   return invoke('convert_to_pdf', { src })
+}
+
+// ============================================================
+// FILE METADATA  (Doc ID, version, effective date, status read from the file)
+// ------------------------------------------------------------
+// Filed documents are generated from source, so for these four fields the
+// file is the record. Scans pull them in; see fileMeta.js for the rules.
+// ============================================================
+
+/** Read what a document's file says about itself, or null if unreadable / not desktop. */
+export async function readFileMeta(doc) {
+  if (!isTauri() || !doc) return null
+  const { invoke } = await import('@tauri-apps/api/core')
+  try {
+    if (doc.docxPath) {
+      const [props, text] = await Promise.all([
+        invoke('read_docx_props', { path: doc.docxPath }),
+        invoke('extract_docx_text', { path: doc.docxPath }),
+      ])
+      return buildFileMeta({ fileName: doc.fileName, props, text })
+    }
+    if (doc.pdfPath) {
+      const text = await invoke('extract_pdf_text', { path: doc.pdfPath })
+      return buildFileMeta({ fileName: doc.fileName, text })
+    }
+    if (isScript(doc.fileType) && doc.filePath) {
+      const text = await invoke('read_text_file', { path: doc.filePath })
+      return buildFileMeta({ fileName: doc.fileName, text, script: true })
+    }
+  } catch { /* missing or unreadable file → nothing to apply */ }
+  return null
+}
+
+/**
+ * Bring documents' file-sourced fields in line with their files. Returns
+ * [{ doc, changes }] for each document that changed (doc = the old values).
+ */
+export async function applyFileMetadata(docs) {
+  const applied = []
+  for (const doc of docs) {
+    const changes = fileMetaChanges(doc, await readFileMeta(doc))
+    if (!Object.keys(changes).length) continue
+    if (useCloud()) await cloud.updateFileMeta(doc.id, changes)
+    else await updateDocument({ ...doc, ...changes })
+    applied.push({ doc, changes })
+  }
+  return applied
 }
 
 // ============================================================
@@ -923,6 +974,7 @@ export async function exportMetadata() {
       favorite: d.favorite,
       sourceUrl: d.sourceUrl,
       docId: d.docId,
+      effectiveDate: d.effectiveDate,
       domain: d.domain,
       audience: d.audience,
     })),
@@ -992,6 +1044,7 @@ export async function importMetadata(data) {
       favorite: bd.favorite ?? local.favorite,
       sourceUrl: bd.sourceUrl ?? local.sourceUrl,
       docId: bd.docId ?? local.docId,
+      effectiveDate: bd.effectiveDate ?? local.effectiveDate,
       domain: bd.domain ?? local.domain,
       audience: bd.audience ?? local.audience,
     })

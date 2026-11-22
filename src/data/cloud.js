@@ -61,6 +61,7 @@ function rowToDoc(r) {
     favorite: !!r.favorite,
     sourceUrl: r.source_url ?? '',
     docId: r.doc_id ?? '',
+    effectiveDate: r.effective_date ?? '',
     domain: r.domain ?? '',
     audience: r.audience ?? 'Internal',
     lastOpened: opened[r.id] ?? '',
@@ -92,6 +93,7 @@ function docToRow(d) {
     favorite: !!d.favorite,
     source_url: d.sourceUrl ?? '',
     doc_id: d.docId ?? '',
+    effective_date: d.effectiveDate ?? '',
     domain: d.domain ?? '',
     audience: d.audience ?? 'Internal',
     updated_at: new Date().toISOString(),
@@ -214,6 +216,16 @@ export async function syncScannedDocuments(items) {
     }
   }
   return { added, relinked, addedIds }
+}
+
+/** Write only the file-sourced fields (Doc ID, version, effective date, status). */
+export async function updateFileMeta(id, changes) {
+  const cols = { docId: 'doc_id', version: 'version', effectiveDate: 'effective_date', status: 'status' }
+  const row = Object.fromEntries(Object.entries(changes).map(([k, v]) => [cols[k], v]))
+  const { error } = await supabase.from('documents')
+    .update({ ...row, updated_at: new Date().toISOString(), updated_by: currentEmail() })
+    .eq('id', id)
+  if (error) throw error
 }
 
 // ============================================================

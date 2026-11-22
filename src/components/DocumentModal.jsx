@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { CATEGORIES, CATEGORY_MAP, getCategoryInfo, STATUSES, DOMAINS, AUDIENCES, FILE_TYPE_OPTIONS } from '../data/categories'
 import { isTauri } from '../data/db'
-import { getTags, addTag, getClientNames, suggestDocId } from '../data/repo'
+import { getTags, addTag, getClientNames, suggestDocId, readFileMeta } from '../data/repo'
 
 const EMPTY = {
   title: '',
@@ -18,8 +18,13 @@ const EMPTY = {
   versionNotes: '',
   sourceUrl: '',
   docId: '',
+  effectiveDate: '',
   domain: '',
   audience: 'Internal',
+}
+
+function FromFileNote() {
+  return <div className="text-xs mt-1" style={{ color: '#9ca3af' }}>Read from the file</div>
 }
 
 export default function DocumentModal({ doc, onSave, onClose, vaultPath, categoryNames }) {
@@ -67,6 +72,38 @@ export default function DocumentModal({ doc, onSave, onClose, vaultPath, categor
   }, [onClose])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  // Doc ID / version / effective date that the file itself declares. Those
+  // fields are filled from the file and locked: the next scan would overwrite
+  // anything typed over them.
+  const [fileMetaFor, setFileMetaFor] = useState({ path: '', meta: null })
+  const metaPath = form.docxPath || form.pdfPath || form.filePath
+  const fileMeta = fileMetaFor.path === metaPath ? fileMetaFor.meta : null
+  useEffect(() => {
+    if (!isTauri() || !metaPath) return
+    let cancelled = false
+    const type = (form.fileType || '').toLowerCase()
+    readFileMeta({
+      fileName: form.fileName,
+      fileType: type,
+      filePath: form.filePath,
+      docxPath: form.docxPath || (type === 'docx' ? form.filePath : ''),
+      pdfPath: form.pdfPath || (type === 'pdf' ? form.filePath : ''),
+    }).then((meta) => {
+      if (cancelled) return
+      setFileMetaFor({ path: metaPath, meta })
+      if (!meta) return
+      setForm((f) => ({
+        ...f,
+        docId: meta.docId || f.docId,
+        version: meta.version || f.version,
+        effectiveDate: meta.effectiveDate || f.effectiveDate,
+      }))
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metaPath, form.fileType])
+  const fromFile = (k) => !!fileMeta?.[k]
 
   const addTagToForm = (tag) => {
     const t = tag.trim()
@@ -190,24 +227,28 @@ export default function DocumentModal({ doc, onSave, onClose, vaultPath, categor
               <input
                 value={form.docId}
                 onChange={(e) => set('docId', e.target.value)}
+                readOnly={fromFile('docId')}
                 className="input-base flex-1 font-mono"
+                style={fromFile('docId') ? { background: '#f9fafb', color: '#6b7280' } : undefined}
                 placeholder="e.g. SOP-MDM-003"
               />
-              <button
+              {!fromFile('docId') && <button
                 type="button"
                 onClick={handleSuggestDocId}
                 className="text-sm px-3 py-1.5 rounded border transition-colors hover:bg-gray-50 flex-shrink-0"
                 style={{ borderColor: '#d1d5db', color: '#374151' }}
               >
                 Suggest
-              </button>
+              </button>}
             </div>
-            <div className="text-xs mt-1" style={{ color: '#9ca3af' }}>
-              Stable identifier in <span className="font-mono">TYPE-DOMAIN-NNN</span> form. Pick a domain, then Suggest for the next free number.
-            </div>
+            {fromFile('docId') ? <FromFileNote /> : (
+              <div className="text-xs mt-1" style={{ color: '#9ca3af' }}>
+                Stable identifier in <span className="font-mono">TYPE-DOMAIN-NNN</span> form. Pick a domain, then Suggest for the next free number.
+              </div>
+            )}
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Field label="File type">
               <select value={form.fileType} onChange={(e) => set('fileType', e.target.value)} className="input-base">
                 {FILE_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -217,9 +258,23 @@ export default function DocumentModal({ doc, onSave, onClose, vaultPath, categor
               <input
                 value={form.version}
                 onChange={(e) => set('version', e.target.value)}
+                readOnly={fromFile('version')}
                 className="input-base"
-                placeholder="e.g. 1.2 (auto-detected from filename)"
+                style={fromFile('version') ? { background: '#f9fafb', color: '#6b7280' } : undefined}
+                placeholder="e.g. 1.2"
               />
+              {fromFile('version') && <FromFileNote />}
+            </Field>
+            <Field label="Effective date">
+              <input
+                value={form.effectiveDate}
+                onChange={(e) => set('effectiveDate', e.target.value)}
+                readOnly={fromFile('effectiveDate')}
+                className="input-base"
+                style={fromFile('effectiveDate') ? { background: '#f9fafb', color: '#6b7280' } : undefined}
+                placeholder="YYYY-MM-DD"
+              />
+              {fromFile('effectiveDate') && <FromFileNote />}
             </Field>
           </div>
 

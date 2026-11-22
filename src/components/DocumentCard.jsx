@@ -72,8 +72,21 @@ export default function DocumentCard({ doc, selected, onClick, onToggleFavorite,
           )}
         </div>
 
-        {doc.docId && (
-          <div className="text-xs font-mono mt-0.5" style={{ color: '#9ca3af' }}>{doc.docId}</div>
+        {(doc.docId || doc.version || doc.effectiveDate) && (
+          <div className="flex items-baseline justify-between gap-2 text-xs mt-0.5" style={{ color: '#9ca3af' }}>
+            <span className="font-mono truncate">{doc.docId}</span>
+            {(doc.version || doc.effectiveDate) && (
+              <span className="flex-shrink-0 whitespace-nowrap" title="Version · effective date (read from the file)">
+                {doc.version && `v${doc.version}`}
+                {doc.version && doc.effectiveDate && ' · '}
+                {doc.effectiveDate && (
+                  /^\d{4}-\d{2}-\d{2}$/.test(doc.effectiveDate)
+                    ? <span>Eff. {doc.effectiveDate}</span>
+                    : <span style={{ color: '#b45309' }}>{doc.effectiveDate}</span>
+                )}
+              </span>
+            )}
+          </div>
         )}
 
         {doc.description && (
@@ -112,9 +125,6 @@ export default function DocumentCard({ doc, selected, onClick, onToggleFavorite,
           <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: status.bg, color: status.color }}>
             {status.label}
           </span>
-          {doc.version && (
-            <span className="text-xs" style={{ color: '#9ca3af' }}>v{doc.version}</span>
-          )}
           {review && review.urgent && (
             <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: review.bg, color: review.color }}>
               {review.label}

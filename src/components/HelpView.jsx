@@ -84,6 +84,14 @@ export default function HelpView() {
             (use Suggest, or type your established ID). <strong>Domain</strong> is the tool/area (Hornetsecurity, M365,
             DNSFilter…) and lets you browse across types. <strong>Audience</strong> marks a doc Internal or Client-facing.
           </Q>
+          <Q q="Doc ID, version & effective date come from the file">
+            Every <strong>Sync Vault</strong> reads each document's own properties and cover page (or a script's
+            <span style={{ fontFamily: 'monospace' }}> # Version / # Updated</span> header) and fills in its Doc ID, version,
+            effective date and status (Approved → Active). The file is the record, so these fields are locked in the
+            edit form when the file provides them. A copy that hasn't finished syncing (an older version) never rolls a
+            document back, and archived documents stay archived. Use <strong>Reload from file</strong> on one document
+            without a full sync. A warning shows when the filename's Doc ID differs from the document's.
+          </Q>
           <Q q="Review dates & version notes">
             Set a <strong>review date</strong> to get reminded (and flagged on the dashboard) when a doc is due for a
             refresh. Paste a changelog into <strong>Version notes</strong> when you update a version, and the

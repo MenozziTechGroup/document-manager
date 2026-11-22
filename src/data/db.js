@@ -60,6 +60,7 @@ export function rowToDoc(r) {
     lastOpened: r.last_opened ?? '',
     sourceUrl: r.source_url ?? '',
     docId: r.doc_id ?? '',
+    effectiveDate: r.effective_date ?? '',
     domain: r.domain ?? '',
     audience: r.audience ?? 'Internal',
     createdAt: r.created_at,
