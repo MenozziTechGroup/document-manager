@@ -145,6 +145,11 @@ export async function updateDocument(doc) {
   if (error) throw error
   return rowToDoc(data)
 }
+// Deletes only the documents row. playbook_members points at documents by rel_key, not
+// by id, so there is nothing to cascade and nothing to clean up here: getGroupMembers()
+// drops members whose rel_key no longer resolves, and a document re-filed at the same
+// path rejoins its playbooks. Do not "fix" this by also deleting members - that would
+// break re-filing. See BACKEND_SETUP.md.
 export async function deleteDocument(id) {
   const { error } = await supabase.from('documents').delete().eq('id', id)
   if (error) throw error

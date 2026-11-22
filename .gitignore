@@ -22,3 +22,6 @@ Thumbs.db
 
 # Local Claude Code settings (per-machine)
 .claude/settings.local.json
+
+# Operational details - the repo is public, so these stay local
+OPERATIONS.local.md
