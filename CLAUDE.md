@@ -49,6 +49,11 @@ Internal name/identifier stays `tech.menozzi.docmanager` and the DB file is
   `write_text_file`/`read_text_file`, `import_into_vault`, `convert_to_pdf` (Word COM via
   PowerShell), `extract_docx_text`, `extract_pdf_text`, `read_docx_props` (DocBuilder custom
   properties DocID/DocVersion/DocStatus + core title).
+- `src/data/registry.js` — Doc ID Registry (Supabase, cloud-only): load, import from
+  `IDX-IT-001_Registry.json`, `allocate_doc_id` RPC, retire/release, export in the same JSON shape.
+  `src/data/docIds.js` — pure Doc ID rules (format, filename convention, `validateDocument`).
+  `src/components/RegistryView.jsx` — the Registry page. **DocCenter is the registry's master copy**;
+  the IDX-IT-001 DocBuilder script should build from DocCenter's export.
 - `src/data/fileMeta.js` — pure parsing of file-sourced metadata (properties → cover table /
   script header → filename) and the rules for applying it (`fileMetaChanges`).
 
@@ -110,13 +115,14 @@ a key held in GitHub Actions secrets; that file says where the local copy lives.
 3. Each person: sync the SharePoint library → Settings → Vault Folder → point at it → sign in.
 4. From the main machine: Settings → Account → "Migrate local library to cloud" once.
 
-## In design (not yet built)
+## In progress
 
-**Doc ID Registry.** Move the IDX-IT-001 registry (type codes, domain codes, retired IDs, next
-number) into Supabase, then use it to: validate on Add, suggest the next ID with retired IDs
-counted, report registry-vs-SharePoint mismatches, and export the inventory and registry to Excel.
+**Doc ID Registry** — v0.1.13 ships the tables, import, Registry page, validation, Reserve next,
+Supersede → retire, and JSON export. Still to build (v0.1.14): the health report (ledger vs
+SharePoint mismatches) and Excel export of inventory + registry. Then switch the IDX-IT-001
+DocBuilder script to read DocCenter's export instead of its own hardcoded lists.
 Doc ID format is `TYPE-DOMAIN-NNN`; filenames are `[DOC-ID]_[Title_With_Underscores].docx`
-(optionally `_vN.N`). Retired IDs are never reused.
+(optionally `_vN.N`; script titles may use hyphens). Retired IDs are never reused.
 
 ## Parked for later (not yet built)
 

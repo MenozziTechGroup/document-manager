@@ -66,7 +66,7 @@ export default function Onboarding({ onComplete }) {
           <div className="text-xs text-left rounded-lg p-4" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }}>
             <div className="font-medium mb-1">For best results, structure your folder like this:</div>
             <div className="font-mono space-y-0.5">
-              {['MITS Docs/', '  ├── Runbooks/', '  ├── SOPs/', '  ├── Checklists/', '  ├── Client Guides/', '  ├── Scripts Reference/', '  └── Letters/'].map((l) => (
+              {['MITS Docs/', '  ├── Runbooks/', '  ├── SOPs/', '  ├── Checklists/', '  ├── Client Guides/', '  ├── Scripts/', '  └── Letters/'].map((l) => (
                 <div key={l}>{l}</div>
               ))}
             </div>

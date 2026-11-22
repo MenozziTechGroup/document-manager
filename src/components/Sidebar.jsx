@@ -4,7 +4,22 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'all', label: 'All Documents', icon: GridIcon },
   { id: 'groups', label: 'Playbooks', icon: GroupIcon },
+  { id: 'registry', label: 'Doc ID Registry', icon: RegistryIcon, cloudOnly: true },
 ]
+
+function RegistryIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <rect x="2" y="1" width="12" height="14" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+      <rect x="4.5" y="4" width="2" height="1.5" rx="0.3"/>
+      <rect x="7.5" y="4" width="4" height="1.5" rx="0.3"/>
+      <rect x="4.5" y="7.25" width="2" height="1.5" rx="0.3"/>
+      <rect x="7.5" y="7.25" width="4" height="1.5" rx="0.3"/>
+      <rect x="4.5" y="10.5" width="2" height="1.5" rx="0.3"/>
+      <rect x="7.5" y="10.5" width="4" height="1.5" rx="0.3"/>
+    </svg>
+  )
+}
 
 function DashboardIcon() {
   return (
@@ -66,7 +81,7 @@ function ClientIcon() {
   )
 }
 
-export default function Sidebar({ view, selectedCategory, selectedClient, selectedDomain, docs, groups, onNavigate, onSettings }) {
+export default function Sidebar({ view, selectedCategory, selectedClient, selectedDomain, docs, groups, onNavigate, onSettings, showRegistry }) {
   const countsByCategory = {}
   const countsByClient = {}
   const countsByDomain = {}
@@ -99,6 +114,7 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
     if (id === 'all') return view === 'all'
     if (id === 'groups') return view === 'groups'
     if (id === 'dashboard') return view === 'dashboard'
+    if (id === 'registry') return view === 'registry'
     return false
   }
 
@@ -123,7 +139,7 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
 
       <nav className="flex-1 overflow-y-auto py-3">
         {/* Primary nav */}
-        {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+        {NAV_ITEMS.filter((n) => !n.cloudOnly || showRegistry).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => onNavigate(id)}

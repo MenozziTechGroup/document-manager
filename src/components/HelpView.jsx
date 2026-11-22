@@ -92,6 +92,15 @@ export default function HelpView() {
             document back, and archived documents stay archived. Use <strong>Reload from file</strong> on one document
             without a full sync. A warning shows when the filename's Doc ID differs from the document's.
           </Q>
+          <Q q="Doc ID Registry">
+            The <strong>Doc ID Registry</strong> (sidebar) is the master list behind IDX-IT-001: type and domain codes,
+            every ID ever issued, retired IDs, open registry issues and the folder map. In the document form,
+            <strong> Reserve next</strong> claims the next free number in that type and domain so nobody else gets it;
+            release it from the registry if you don't use it. Saving checks the Doc ID: duplicates, retired IDs and
+            unregistered codes are refused; a filename that doesn't follow DOC-ID_Title is only a warning. Superseding a
+            document with a new ID retires the old one. <strong>Export for IDX-IT-001</strong> writes the registry
+            JSON the IDX-IT-001 document is built from.
+          </Q>
           <Q q="Review dates & version notes">
             Set a <strong>review date</strong> to get reminded (and flagged on the dashboard) when a doc is due for a
             refresh. Paste a changelog into <strong>Version notes</strong> when you update a version, and the

@@ -467,7 +467,7 @@ export default function SettingsPanel({
               '  ├── SOPs/',
               '  ├── Checklists/',
               '  ├── Client Guides/',
-              '  ├── Scripts Reference/',
+              '  ├── Scripts/',
               '  ├── Letters/',
               '  └── Other/',
             ].map((line) => <div key={line}>{line}</div>)}

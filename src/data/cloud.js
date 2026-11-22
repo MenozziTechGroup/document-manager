@@ -6,6 +6,7 @@
 // Personal, per-machine state (which docs you've recently opened) stays in
 // localStorage and is merged in on load.
 import { supabase, currentEmail } from './supabase'
+import { docIdFromFileName } from './fileMeta'
 
 const uid = () => crypto.randomUUID()
 
@@ -171,7 +172,18 @@ export async function getClientNames() {
   return [...new Set((data ?? []).map((r) => r.client_name).filter(Boolean))].sort()
 }
 
-/** Reconcile a vault scan: upsert by rel_key, relink moved files by base name. */
+/** Move playbook memberships and run steps from one rel_key to another (a file moved/renamed). */
+async function moveRelKeyRefs(oldKey, newKey) {
+  if (!oldKey || oldKey === newKey) return
+  await supabase.from('playbook_members').update({ rel_key: newKey }).eq('rel_key', oldKey)
+  await supabase.from('run_items').update({ rel_key: newKey }).eq('rel_key', oldKey)
+}
+
+/**
+ * Reconcile a vault scan: upsert by rel_key, relink moved files by base name,
+ * and relink RENAMED files by Doc ID (a file renamed to the DOC-ID_Title
+ * convention keeps its record, as long as the old file is gone).
+ */
 export async function syncScannedDocuments(items) {
   const existing = await getDocuments()
   const byKey = new Map(existing.map((d) => [d.relKey, d]))
@@ -179,6 +191,15 @@ export async function syncScannedDocuments(items) {
   for (const d of existing) {
     const b = (d.fileName || '').replace(/\.[^.]+$/, '').toLowerCase()
     if (b && !byBase.has(b)) byBase.set(b, d)
+  }
+  // Doc ID → record, only for records whose file is no longer at its path in
+  // this scan (otherwise two files sharing an ID would steal each other's record)
+  const scannedKeys = new Set(items.map((it) => stripExt(relativize(it.docxPath || it.pdfPath || it.filePath))))
+  const goneById = new Map()
+  for (const d of existing) {
+    if (d.docId && !scannedKeys.has(d.relKey)) {
+      goneById.set(d.docId, goneById.has(d.docId) ? null : d) // ambiguous → null
+    }
   }
   let added = 0, relinked = 0
   const addedIds = []
@@ -203,11 +224,16 @@ export async function syncScannedDocuments(items) {
       continue
     }
     const base = (it.fileName || '').replace(/\.[^.]+$/, '').toLowerCase()
-    const moved = base ? byBase.get(base) : null
+    const fileId = docIdFromFileName(it.fileName)
+    let moved = base ? byBase.get(base) : null
+    if (!(moved && moved.relKey !== relKey) && fileId) moved = goneById.get(fileId) ?? null
     if (moved && moved.relKey !== relKey) {
       // File renamed/moved → keep its metadata, update location (+ new folder's category)
       await supabase.from('documents').update({ ...pathFields, rel_key: relKey, category: it.category }).eq('id', moved.id)
-      byBase.delete(base)
+      await moveRelKeyRefs(moved.relKey, relKey)
+      byBase.delete((moved.fileName || '').replace(/\.[^.]+$/, '').toLowerCase())
+      if (moved.docId) goneById.delete(moved.docId)
+      byKey.set(relKey, moved)
       relinked++
     } else {
       // Brand-new document → insert with scan defaults

@@ -54,6 +54,34 @@ This uploads that machine's documents, metadata, playbooks, and tags. It's **ide
 the first machine migrates, others just **Sync Vault** to attach their local file paths to
 the already-shared metadata.
 
+## Schema changes
+
+Schema changes live in `supabase/migrations/*.sql`, in date order. Run each one in the
+Supabase SQL editor **before** shipping the release that needs it — the app writes every
+column it knows about, so a missing column or table breaks saves. They're written to be
+safe to re-run.
+
+## Doc ID Registry
+
+`20261123_doc_id_registry.sql` adds the registry DocCenter now owns (it replaced the
+hand-maintained lists in IDX-IT-001):
+
+| Table / object | Holds |
+|---|---|
+| `doc_types` | Type codes and the vault folder each lives in |
+| `doc_domains` | Domain codes; retired codes stay with `active = false` |
+| `doc_ids` | The ledger — every ID ever issued, with status, retirement date and replacement. Only a never-used *Reserved* row is ever deleted, so retired numbers can't return |
+| `registry_issues` | Open registry decisions |
+| `registry_folders` | The SharePoint folder map printed in IDX-IT-001 |
+| `doc_series` (view) | Issued numbers and next available ID per series |
+| `allocate_doc_id()` | Reserves the next ID in a series under an advisory lock |
+
+Same access model as everything else: RLS on, any signed-in user has full access.
+Seed it once from **Doc ID Registry → Import JSON** with `IDX-IT-001_Registry.json`.
+
+`documents.doc_id` has no unique constraint yet: the library still has a few
+duplicate IDs. The app refuses new duplicates; add the constraint once they're cleaned up.
+
 ## Realtime
 
 Runs, run items, documents, and playbooks are published to Supabase Realtime, so a change

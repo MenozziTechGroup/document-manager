@@ -10,7 +10,8 @@ import {
   logEvent, applyFileMetadata, readFileMeta,
 } from './data/repo'
 import { describeChanges } from './data/fileMeta'
-import { reviewStatus, DOMAIN_MAP } from './data/categories'
+import { reviewStatus, DOMAIN_MAP, applyRegistryDomains } from './data/categories'
+import { getRegistry, subscribeRegistry, recordDocIdUse, retireDocId } from './data/registry'
 import { isCloudConfigured, getSession, onAuthChange, signOut, currentUserEmail } from './data/supabase'
 import { setVaultRoot, subscribeChanges } from './data/cloud'
 import { checkForUpdate, installUpdate } from './data/updater'
@@ -25,6 +26,7 @@ import PlaybookRunView from './components/PlaybookRunView'
 import StartRunModal from './components/StartRunModal'
 import SettingsPanel from './components/SettingsPanel'
 import HelpView from './components/HelpView'
+import RegistryView from './components/RegistryView'
 import Onboarding from './components/Onboarding'
 import AddToGroupModal from './components/AddToGroupModal'
 import SupersedeModal from './components/SupersedeModal'
@@ -42,6 +44,8 @@ export default function App() {
   const [vaultPath, setVaultPath] = useState(null) // null = not loaded yet
   const [sharePointUrl, setSharePointUrl] = useState('')
   const [missingIds, setMissingIds] = useState(new Set())
+  // Doc ID Registry (Supabase). null = not signed in, or the registry tables don't exist yet
+  const [registry, setRegistry] = useState(null)
 
   // ── Navigation ─────────────────────────────────────────────
   const [view, setView] = useState('loading') // loading|onboarding|dashboard|all|category|client|domain|groups|run|settings
@@ -118,6 +122,26 @@ export default function App() {
     })()
     return () => { mounted = false }
   }, [userId, loadReloadKey])
+
+  // ── Doc ID Registry: load after sign-in, refresh live ──────
+  const reloadRegistry = useCallback(async () => {
+    if (!cloudOn) return null
+    try {
+      const reg = await getRegistry()
+      applyRegistryDomains(reg?.domains)
+      setRegistry(reg)
+      return reg
+    } catch {
+      return null // registry is an add-on; the library works without it
+    }
+  }, [cloudOn])
+  useEffect(() => {
+    if (!cloudOn || !userId) return
+    reloadRegistry()
+    let t
+    const unsub = subscribeRegistry(() => { clearTimeout(t); t = setTimeout(reloadRegistry, 400) })
+    return () => { clearTimeout(t); unsub() }
+  }, [userId, cloudOn, reloadRegistry])
 
   // ── Review reminder notification (once per day) ────────────
   const maybeNotifyReviews = async (allDocs) => {
@@ -516,6 +540,10 @@ export default function App() {
         writeMetadataBackup(vaultPath).catch(() => {})
       }
     }
+    // Keep the registry ledger in step: a saved Doc ID is Filed (added if it's new)
+    if (registry && updated?.docId) {
+      recordDocIdUse(updated.docId, updated.title).then(reloadRegistry).catch(() => {})
+    }
     setDocModal(null)
   }
 
@@ -562,6 +590,17 @@ export default function App() {
     const note = `Superseded by ${ref}${oldDoc.versionNotes ? `\n\n${oldDoc.versionNotes}` : ''}`
     const updated = { ...oldDoc, status: 'archived', versionNotes: note }
     await updateDocument(updated)
+    // A replacement with a different ID retires the old one in the registry for good
+    if (registry && oldDoc.docId && newDoc.docId && oldDoc.docId !== newDoc.docId) {
+      try {
+        await retireDocId(oldDoc.docId, { replacedBy: newDoc.docId, reason: `Superseded by ${newDoc.docId} (${newDoc.title})` })
+        logEvent('Doc ID retired', `${oldDoc.docId} → replaced by ${newDoc.docId}`)
+        reloadRegistry()
+      } catch (err) {
+        alert(`The document was archived, but ${oldDoc.docId} could not be retired in the registry:
+${err.message ?? err}`)
+      }
+    }
     setDocs((prev) => prev.map((d) => (d.id === oldDoc.id ? updated : d)))
     setSelectedDoc((cur) => (cur && cur.id === oldDoc.id ? updated : cur))
     setSupersedeFor(null)
@@ -752,6 +791,7 @@ export default function App() {
         groups={groups}
         onNavigate={navigate}
         onSettings={() => navigate('settings')}
+        showRegistry={cloudOn && !!session}
       />
 
       {/* Main content area */}
@@ -857,6 +897,10 @@ export default function App() {
                 onToggleFavorite={handleToggleFavorite}
               />
             </div>
+          ) : view === 'registry' && searchResults === null ? (
+            <div className="flex-1 overflow-hidden" style={{ background: 'var(--app-bg)' }}>
+              <RegistryView registry={registry} docs={docs} onChanged={reloadRegistry} vaultPath={vaultPath} />
+            </div>
           ) : view === 'help' && searchResults === null ? (
             <div className="flex-1 overflow-hidden" style={{ background: 'var(--app-bg)' }}>
               <HelpView />
@@ -953,6 +997,8 @@ export default function App() {
           onClose={() => setDocModal(null)}
           vaultPath={vaultPath}
           categoryNames={[...new Set(docs.map((d) => d.category))]}
+          docs={docs}
+          registry={registry}
         />
       )}
       {groupModal && (

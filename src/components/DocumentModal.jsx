@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
-import { CATEGORIES, CATEGORY_MAP, getCategoryInfo, STATUSES, DOMAINS, AUDIENCES, FILE_TYPE_OPTIONS } from '../data/categories'
+import { useState, useEffect, useMemo } from 'react'
+import { CATEGORIES, CATEGORY_MAP, getCategoryInfo, STATUSES, DOMAINS, DOMAIN_MAP, AUDIENCES, FILE_TYPE_OPTIONS, isScript } from '../data/categories'
+import { validateDocument, typeCodeForCategory } from '../data/docIds'
+import { allocateDocId } from '../data/registry'
 import { isTauri } from '../data/db'
 import { getTags, addTag, getClientNames, suggestDocId, readFileMeta } from '../data/repo'
 
@@ -27,7 +29,7 @@ function FromFileNote() {
   return <div className="text-xs mt-1" style={{ color: '#9ca3af' }}>Read from the file</div>
 }
 
-export default function DocumentModal({ doc, onSave, onClose, vaultPath, categoryNames }) {
+export default function DocumentModal({ doc, onSave, onClose, vaultPath, categoryNames, docs = [], registry = null }) {
   // categoryNames: optional array of category name strings derived from live docs.
   // Falls back to the predefined CATEGORIES list if not provided.
   const categoryList = categoryNames
@@ -120,19 +122,44 @@ export default function DocumentModal({ doc, onSave, onClose, vaultPath, categor
 
   const removeTag = (tag) => set('tags', form.tags.filter((t) => t !== tag))
 
+  // With the registry, Suggest RESERVES the next ID (so two techs can't both get
+  // it); without it, it falls back to "highest number in the library + 1".
+  const [reservedId, setReservedId] = useState('')
+  const [suggesting, setSuggesting] = useState(false)
   const handleSuggestDocId = async () => {
-    const code = CATEGORY_MAP[form.category]?.code
+    const code = registry ? typeCodeForCategory(form.category, registry) : CATEGORY_MAP[form.category]?.code
     if (!code || !form.domain) {
-      alert('Pick a category and a domain first, then I can suggest the next Doc ID.')
+      alert(code
+        ? 'Pick a domain first, then I can suggest the next Doc ID.'
+        : `The ${form.category} folder has no type code yet. Set its folder in Registry → Types first.`)
       return
     }
-    const id = await suggestDocId(code, form.domain)
-    if (id) set('docId', id)
+    setSuggesting(true)
+    try {
+      const id = registry
+        ? await allocateDocId(code, form.domain, form.title.trim())
+        : await suggestDocId(code, form.domain)
+      if (id) set('docId', id)
+      if (registry) setReservedId(id)
+    } catch (err) {
+      alert(`Couldn't get the next Doc ID:
+${err.message ?? err}`)
+    } finally {
+      setSuggesting(false)
+    }
   }
+
+  const check = useMemo(() => validateDocument({
+    doc: form,
+    original: isEdit ? doc : null,
+    docs,
+    registry,
+    script: isScript(form.fileType),
+  }), [form, isEdit, doc, docs, registry])
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!form.title.trim()) return
+    if (!form.title.trim() || check.errors.length) return
     onSave({
       ...form,
       title: form.title.trim(),
@@ -213,6 +240,9 @@ export default function DocumentModal({ doc, onSave, onClose, vaultPath, categor
               <select value={form.domain} onChange={(e) => set('domain', e.target.value)} className="input-base">
                 <option value="">— None —</option>
                 {DOMAINS.map((d) => <option key={d.code} value={d.code}>{d.code} — {d.label}</option>)}
+                {form.domain && !DOMAINS.some((d) => d.code === form.domain) && (
+                  <option value={form.domain}>{form.domain} — {DOMAIN_MAP[form.domain]?.label ?? 'not registered'} (retired)</option>
+                )}
               </select>
             </Field>
             <Field label="Audience">
@@ -235,16 +265,32 @@ export default function DocumentModal({ doc, onSave, onClose, vaultPath, categor
               {!fromFile('docId') && <button
                 type="button"
                 onClick={handleSuggestDocId}
+                disabled={suggesting || (!!reservedId && form.docId === reservedId)}
                 className="text-sm px-3 py-1.5 rounded border transition-colors hover:bg-gray-50 flex-shrink-0"
                 style={{ borderColor: '#d1d5db', color: '#374151' }}
               >
-                Suggest
+                {reservedId && form.docId === reservedId ? 'Reserved ✓' : registry ? 'Reserve next' : 'Suggest'}
               </button>}
             </div>
-            {fromFile('docId') ? <FromFileNote /> : (
+            {fromFile('docId') ? <FromFileNote /> : reservedId && form.docId === reservedId ? (
               <div className="text-xs mt-1" style={{ color: '#9ca3af' }}>
-                Stable identifier in <span className="font-mono">TYPE-DOMAIN-NNN</span> form. Pick a domain, then Suggest for the next free number.
+                {reservedId} is reserved for you in the registry. If you don’t use it, release it in Doc ID Registry.
               </div>
+            ) : (
+              <div className="text-xs mt-1" style={{ color: '#9ca3af' }}>
+                Stable identifier in <span className="font-mono">TYPE-DOMAIN-NNN</span> form. Pick a domain, then
+                {registry ? ' Reserve next to claim the next free number.' : ' Suggest for the next free number.'}
+              </div>
+            )}
+            {(check.errors.length > 0 || check.warnings.length > 0) && (
+              <ul className="mt-2 space-y-1 text-xs">
+                {check.errors.map((m) => (
+                  <li key={m} className="px-2 py-1 rounded" style={{ background: '#fee2e2', color: '#b91c1c' }}>✕ {m}</li>
+                ))}
+                {check.warnings.map((m) => (
+                  <li key={m} className="px-2 py-1 rounded" style={{ background: '#fff7ed', color: '#c2410c' }}>⚠ {m}</li>
+                ))}
+              </ul>
             )}
           </Field>
 
@@ -498,8 +544,10 @@ export default function DocumentModal({ doc, onSave, onClose, vaultPath, categor
           </button>
           <button
             onClick={handleSubmit}
+            disabled={check.errors.length > 0}
+            title={check.errors.length ? 'Fix the Doc ID problems above first' : undefined}
             className="text-sm px-4 py-2 rounded text-white font-medium"
-            style={{ background: 'var(--mits-red)' }}
+            style={{ background: 'var(--mits-red)', opacity: check.errors.length ? 0.5 : 1 }}
           >
             {isEdit ? 'Save Changes' : 'Add Document'}
           </button>

@@ -2,7 +2,7 @@ import { getDb, isTauri, lsGet, lsSet, rowToDoc, rowToGroup } from './db'
 import * as cloud from './cloud'
 import { useCloud } from './supabase'
 import { isScript } from './categories'
-import { buildFileMeta, fileMetaChanges } from './fileMeta'
+import { buildFileMeta, fileMetaChanges, docIdFromFileName } from './fileMeta'
 
 const LS_DOCS = 'docmanager-docs-v1'
 const LS_GROUPS = 'docmanager-groups-v1'
@@ -115,6 +115,8 @@ export async function createDocument(doc) {
  *  - file already tracked at this path → refresh its paired paths
  *  - a file with the same base name exists but at a different path → RELINK
  *    (the file was renamed/moved; keep all its metadata, update the location)
+ *  - a file whose Doc ID matches a record whose file is gone → RELINK
+ *    (renamed to a new title; playbook links follow because they key on id)
  *  - otherwise → insert a new record
  * Returns { added, relinked }.
  */
@@ -127,6 +129,13 @@ export async function syncScannedDocuments(items) {
     const b = (d.fileName || '').replace(/\.[^.]+$/, '').toLowerCase()
     if (b && !byBase.has(b)) byBase.set(b, d)
   }
+  const scannedPaths = new Set(items.map((it) => it.filePath))
+  const goneById = new Map()
+  for (const d of existing) {
+    if (d.docId && !scannedPaths.has(d.filePath)) {
+      goneById.set(d.docId, goneById.has(d.docId) ? null : d) // ambiguous → null
+    }
+  }
   let added = 0, relinked = 0
   const addedIds = []
   for (const it of items) {
@@ -135,7 +144,9 @@ export async function syncScannedDocuments(items) {
       continue
     }
     const base = (it.fileName || '').replace(/\.[^.]+$/, '').toLowerCase()
-    const moved = base ? byBase.get(base) : null
+    const fileId = docIdFromFileName(it.fileName)
+    let moved = base ? byBase.get(base) : null
+    if (!(moved && moved.filePath !== it.filePath) && fileId) moved = goneById.get(fileId) ?? null
     if (moved && moved.filePath !== it.filePath) {
       await updateDocument({
         ...moved,
@@ -146,7 +157,10 @@ export async function syncScannedDocuments(items) {
         docxPath: it.docxPath,
         pdfPath: it.pdfPath,
       })
-      byBase.delete(base) // don't relink the same record twice in one scan
+      // don't relink the same record twice in one scan
+      byBase.delete((moved.fileName || '').replace(/\.[^.]+$/, '').toLowerCase())
+      if (moved.docId) goneById.delete(moved.docId)
+      byFilePath.set(it.filePath, moved)
       relinked++
     } else {
       const doc = await createDocument(it)

@@ -3,8 +3,7 @@ export const CATEGORIES = [
   { id: 'SOPs',            label: 'SOPs',               code: 'SOP', color: '#2563eb', bg: '#dbeafe' },
   { id: 'Checklists',      label: 'Checklists',         code: 'CHK', color: '#16a34a', bg: '#dcfce7' },
   { id: 'Client Guides',   label: 'Client Guides',      code: 'CGD', color: '#d97706', bg: '#fef3c7' },
-  { id: 'Scripts',           label: 'Scripts',            code: 'SCP', color: '#ea580c', bg: '#ffedd5' },
-  { id: 'Scripts Reference', label: 'Scripts Reference', code: 'SCR', color: '#7c3aed', bg: '#ede9fe' },
+  { id: 'Scripts',         label: 'Scripts',            code: 'SCR', color: '#ea580c', bg: '#ffedd5' },
   { id: 'Reference',       label: 'Reference',          code: 'REF', color: '#0d9488', bg: '#ccfbf1' },
   { id: 'Policy',          label: 'Policy',             code: 'POL', color: '#9333ea', bg: '#f3e8ff' },
   { id: 'Letters',         label: 'Letters',            code: 'LTR', color: '#0891b2', bg: '#cffafe' },
@@ -23,23 +22,46 @@ export function getCategoryInfo(name) {
 // Domain codes — the second organizing axis (the tool/area a document is about).
 // Used alongside the type/category to form Doc IDs like SOP-MDM-003 and to
 // browse "everything Hornetsecurity" across document types.
+// Fallback list (IDX-IT-001 v2.9.2). When signed in, the Doc ID Registry in
+// Supabase replaces it via applyRegistryDomains().
 export const DOMAINS = [
   { code: 'IT',   label: 'General IT' },
-  { code: 'MDM',  label: 'MDM / Apple Devices' },
-  { code: 'DNS',  label: 'DNSFilter' },
-  { code: 'NIN',  label: 'NinjaOne' },
+  { code: 'MDM',  label: 'Mobile Device Management (Apple Business and Android Enterprise; ABM consolidated here)' },
+  { code: 'DNS',  label: 'DNS Filtering (DNSFilter)' },
+  { code: 'NIN',  label: 'NinjaOne (RMM)' },
   { code: 'M365', label: 'Microsoft 365' },
   { code: 'HRN',  label: 'Hornetsecurity' },
-  { code: 'PS',   label: 'PowerShell' },
-  { code: 'DOC',  label: 'Document System' },
-  { code: 'ACC',  label: 'Account Management' },
+  { code: 'HAL',  label: 'HaloPSA' },
+  { code: 'PS',   label: 'PowerShell (standalone scripts)' },
+  { code: 'DOC',  label: 'Document system / templates' },
+  { code: 'ACC',  label: 'Account / user management' },
+  { code: 'CLI',  label: 'Client onboarding / discovery' },
   { code: 'ONB',  label: 'Onboarding' },
   { code: 'OFB',  label: 'Offboarding' },
   { code: 'INC',  label: 'Incident Response' },
-  { code: 'HR',   label: 'HR' },
+  { code: 'SEC',  label: 'Security' },
+  { code: 'HR',   label: 'Human Resources' },
+  { code: 'MKT',  label: 'Marketing' },
+  { code: 'KPR',  label: 'Keeper (password management)' },
+  { code: 'NET',  label: 'Networking (UniFi, firewalls, VLANs)' },
+  { code: 'HIP',  label: 'HIPAA / healthcare compliance' },
+  { code: 'HUNT', label: 'Huntress (EDR, ITDR, SIEM, ISPM, ESPM)' },
+  { code: 'VOX',  label: 'Voice Studio (VoIP greetings, hold programs, voicemail)' },
+  { code: 'OPS',  label: 'Internal operations tools (MITS Ops hub at ops.menozzi.tech)' },
 ]
 
 export const DOMAIN_MAP = Object.fromEntries(DOMAINS.map((d) => [d.code, d]))
+
+/**
+ * Swap in the registry's ACTIVE domain codes, in place, so every component that
+ * imported DOMAINS / DOMAIN_MAP sees them. Retired codes keep their label in
+ * DOMAIN_MAP (old documents still display) but drop out of the pick list.
+ */
+export function applyRegistryDomains(domains) {
+  if (!domains?.length) return
+  DOMAINS.splice(0, DOMAINS.length, ...domains.filter((d) => d.active).map((d) => ({ code: d.code, label: d.name || d.code })))
+  for (const d of domains) DOMAIN_MAP[d.code] = { code: d.code, label: d.name || d.code }
+}
 
 export const AUDIENCES = [
   { id: 'Internal', label: 'Internal' },
