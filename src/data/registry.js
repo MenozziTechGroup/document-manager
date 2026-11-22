@@ -163,7 +163,7 @@ export async function importRegistryJson(json, docs = []) {
   for (const e of json.ids) put(e.docId, { title: e.title ?? '', status: e.status || 'Filed', notes: e.notes ?? '' })
   for (const r of json.retired ?? []) {
     put(r.docId, {
-      status: 'Retired', retired_at: r.retired || null, replaced_by: r.replacedBy ?? '', retire_reason: r.reason ?? '',
+      status: 'Retired', retired_at: r.retired || null, replaced_by: DOC_ID_RE.test(r.replacedBy ?? '') ? r.replacedBy : '', retire_reason: r.reason ?? '',
       title: idRows.get(r.docId)?.title ?? '',
     })
   }

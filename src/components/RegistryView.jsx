@@ -123,7 +123,7 @@ export default function RegistryView({ registry, docs, onChanged, vaultPath }) {
           </div>
         </div>
         {registry && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0 whitespace-nowrap">
             <button onClick={handleImport} disabled={busy} className="text-xs px-3 py-1.5 rounded border" style={{ borderColor: '#d1d5db', color: '#374151' }}>
               Import JSON…
             </button>

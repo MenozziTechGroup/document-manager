@@ -124,6 +124,7 @@ begin
 end $$;
 
 grant select on public.doc_series to authenticated;
+revoke execute on function public.allocate_doc_id(text, text, text) from public, anon;
 grant execute on function public.allocate_doc_id(text, text, text) to authenticated;
 
 -- Live refresh for the Registry view
