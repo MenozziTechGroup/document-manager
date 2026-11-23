@@ -1,4 +1,20 @@
+import { useState, useRef, useEffect } from 'react'
 import { CATEGORY_MAP, getCategoryInfo, DOMAIN_MAP } from '../data/categories'
+
+// Resizable width, remembered per machine. Double-click the edge to reset.
+const WIDTH_KEY = 'doccenter-sidebar-width'
+const DEFAULT_WIDTH = 220
+const MIN_WIDTH = 180
+const MAX_WIDTH = 420
+const clampWidth = (w) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(w)))
+function savedWidth() {
+  try {
+    const w = parseInt(localStorage.getItem(WIDTH_KEY) ?? '', 10)
+    return Number.isFinite(w) ? clampWidth(w) : DEFAULT_WIDTH
+  } catch {
+    return DEFAULT_WIDTH
+  }
+}
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
@@ -110,6 +126,32 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
   const clientNames = Object.keys(countsByClient).sort()
   const domainCodes = Object.keys(countsByDomain).sort()
 
+  const [width, setWidth] = useState(savedWidth)
+  const [resizing, setResizing] = useState(false)
+  const asideRef = useRef(null)
+  useEffect(() => {
+    if (!resizing) return
+    const onMove = (e) => {
+      const left = asideRef.current?.getBoundingClientRect().left ?? 0
+      setWidth(clampWidth(e.clientX - left))
+    }
+    const onUp = () => setResizing(false)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [resizing])
+  useEffect(() => {
+    if (resizing) return
+    try { localStorage.setItem(WIDTH_KEY, String(width)) } catch { /* per-machine nicety only */ }
+  }, [width, resizing])
+
   const isActive = (id) => {
     if (id === 'all') return view === 'all'
     if (id === 'groups') return view === 'groups'
@@ -120,9 +162,24 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
 
   return (
     <aside
-      className="flex flex-col h-full text-sm"
-      style={{ width: 'var(--sidebar-width)', background: 'var(--sidebar-bg)', color: '#e5e5e5' }}
+      ref={asideRef}
+      className="relative flex flex-col h-full text-sm flex-shrink-0"
+      style={{ width, background: 'var(--sidebar-bg)', color: '#e5e5e5' }}
     >
+      {/* Drag handle on the right edge */}
+      <div
+        onMouseDown={(e) => { e.preventDefault(); setResizing(true) }}
+        onDoubleClick={() => setWidth(DEFAULT_WIDTH)}
+        title="Drag to resize · double-click to reset"
+        className="absolute top-0 right-0 h-full z-10"
+        style={{
+          width: 6, marginRight: -3, cursor: 'col-resize',
+          background: resizing ? 'rgba(225,37,27,0.6)' : 'transparent',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={(e) => { if (!resizing) e.currentTarget.style.background = 'rgba(225,37,27,0.35)' }}
+        onMouseLeave={(e) => { if (!resizing) e.currentTarget.style.background = 'transparent' }}
+      />
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4 border-b border-white/10">
         <div
@@ -206,9 +263,9 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
                     color: active ? 'white' : '#ccc',
                   }}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono px-1 rounded" style={{ background: 'rgba(255,255,255,0.08)', color: '#bbb' }}>{code}</span>
-                    <span className="truncate" style={{ maxWidth: 110 }}>{DOMAIN_MAP[code]?.label ?? code}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-mono px-1 rounded flex-shrink-0" style={{ background: 'rgba(255,255,255,0.08)', color: '#bbb' }}>{code}</span>
+                    <span className="truncate">{DOMAIN_MAP[code]?.label ?? code}</span>
                   </div>
                   <span className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(255,255,255,0.1)', color: '#bbb' }}>
                     {countsByDomain[code]}
@@ -237,9 +294,9 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
                     color: active ? 'white' : '#ccc',
                   }}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <ClientIcon />
-                    <span className="truncate" style={{ maxWidth: 120 }}>{name}</span>
+                    <span className="truncate">{name}</span>
                   </div>
                   <span
                     className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
