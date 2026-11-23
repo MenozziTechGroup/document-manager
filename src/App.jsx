@@ -10,7 +10,7 @@ import {
   logEvent, applyFileMetadata, readFileMeta,
 } from './data/repo'
 import { describeChanges } from './data/fileMeta'
-import { reviewStatus, DOMAIN_MAP, applyRegistryDomains } from './data/categories'
+import { reviewStatus, DOMAIN_MAP, applyRegistryDomains, todayLocal } from './data/categories'
 import { getRegistry, subscribeRegistry, recordDocIdUse, retireDocId } from './data/registry'
 import { isCloudConfigured, getSession, onAuthChange, signOut, currentUserEmail } from './data/supabase'
 import { setVaultRoot, subscribeChanges } from './data/cloud'
@@ -151,7 +151,7 @@ export default function App() {
       return rs && rs.urgent
     })
     if (due.length === 0) return
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayLocal()
     const last = await getSetting('lastReviewNotified', '')
     if (last === today) return
     try {

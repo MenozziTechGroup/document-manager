@@ -6,7 +6,7 @@ import { getDocuments, findMissingDocIds } from './repo'
 import { getRegistry } from './registry'
 import { registryHealth } from './health'
 import { parseDocId, typeCodeForCategory } from './docIds'
-import { DOMAIN_MAP, STATUS_MAP } from './categories'
+import { DOMAIN_MAP, STATUS_MAP, todayLocal } from './categories'
 import { isTauri } from './db'
 
 const HEADER_FILL = 'FFE1251B' // MITS red
@@ -171,7 +171,7 @@ export async function exportWorkbook({ vaultPath } = {}) {
     findMissingDocIds(docs).catch(() => new Set()),
   ])
   const buffer = await buildWorkbook({ docs, registry, missingIds })
-  const stamp = new Date().toISOString().slice(0, 10)
+  const stamp = todayLocal()
   const fileName = `MITS_DocCenter_Inventory_${stamp}.xlsx`
   if (isTauri()) {
     const { save } = await import('@tauri-apps/plugin-dialog')

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { isTauri } from '../data/db'
 import { logEvent } from '../data/repo'
+import { todayLocal } from '../data/categories'
 import {
   ID_STATUSES, importRegistryJson, buildRegistryJson, retireDocId, releaseReservedId,
   updateIdEntry, saveDomain, saveType, addIssue, resolveIssue, recordDocIdUse,
@@ -380,7 +381,7 @@ function Ledger({ registry, docs, run, busy }) {
 function RetireForm({ entry, busy, onSubmit, onCancel }) {
   const [replacedBy, setReplacedBy] = useState('')
   const [reason, setReason] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(todayLocal())
   return (
     <InlineForm onCancel={onCancel} busy={busy} submitLabel={`Retire ${entry.docId}`} danger
       onSubmit={() => onSubmit({ replacedBy: replacedBy.trim().toUpperCase(), reason: reason.trim(), date })}>

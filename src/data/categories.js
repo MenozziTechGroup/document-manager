@@ -124,6 +124,12 @@ export const PHASES = [
 export const PHASE_MAP = Object.fromEntries(PHASES.map((p) => [p.id, p]))
 export const PHASE_ORDER = Object.fromEntries(PHASES.map((p, i) => [p.id, i]))
 
+/** Today as YYYY-MM-DD in local time (toISOString() is UTC — tomorrow, every evening in Mountain time). */
+export function todayLocal(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 /**
  * Returns display info for a review_by date string.
  * Returns null if no date is set.

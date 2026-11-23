@@ -7,6 +7,7 @@
 import { supabase, currentEmail } from './supabase'
 import { DOC_ID_RE, parseDocId } from './docIds'
 import { NOT_FILED_STATUSES } from './health'
+import { todayLocal } from './categories'
 
 export const ID_STATUSES = ['Reserved', 'Draft', 'Filed', 'Outside', 'Unlocated', 'Tool', 'Retired']
 
@@ -88,7 +89,7 @@ export async function recordDocIdUse(docId, title) {
 export async function retireDocId(docId, { replacedBy = '', reason = '', date = null } = {}) {
   await q(supabase.from('doc_ids').update({
     status: 'Retired',
-    retired_at: date || new Date().toISOString().slice(0, 10),
+    retired_at: date || todayLocal(),
     replaced_by: replacedBy,
     retire_reason: reason,
   }).eq('doc_id', docId))
@@ -218,7 +219,7 @@ export function buildRegistryJson(registry, docs = []) {
   return {
     docId: 'IDX-IT-001',
     source: 'MITS DocCenter',
-    generated: new Date().toISOString().slice(0, 10),
+    generated: todayLocal(),
     typeCodes: registry.types.filter((t) => t.active)
       .map((t) => ({ code: t.code, type: t.name, use: t.use, folder: t.folder })),
     domainCodes: registry.domains.filter((d) => d.active)
