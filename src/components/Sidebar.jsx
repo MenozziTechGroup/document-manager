@@ -264,7 +264,7 @@ export default function Sidebar({ view, selectedCategory, selectedClient, select
                   }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-mono px-1 rounded flex-shrink-0" style={{ background: 'rgba(255,255,255,0.08)', color: '#bbb' }}>{code}</span>
+                    <span className="text-xs font-mono rounded flex-shrink-0 text-center" style={{ width: 'calc(4ch + 8px)', background: 'rgba(255,255,255,0.08)', color: '#bbb' }}>{code}</span>
                     <span className="truncate">{DOMAIN_MAP[code]?.label ?? code}</span>
                   </div>
                   <span className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(255,255,255,0.1)', color: '#bbb' }}>
